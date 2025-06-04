@@ -8,7 +8,7 @@ python:
   install:
     - method: pip
       path: .
-      extra-requirements:
+      extra_requirements:
         - docs
   post_install:
     - pip install torch==2.2.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
