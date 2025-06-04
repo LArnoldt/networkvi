@@ -4,7 +4,10 @@ import torch
 import torch.nn as nn
 import numpy as np
 from operator import itemgetter
-import torch_sparse
+try:
+    import torch_sparse
+except ImportError:
+    print("Install torch-sparse and torch-scatter via: pip install -U torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-[VERSION]+cu[VERSION].html")
 from collections import defaultdict
 from typing import Optional, Callable, List, Tuple
 from torch.nn import init
