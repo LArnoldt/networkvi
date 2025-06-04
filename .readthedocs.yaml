@@ -17,6 +17,3 @@ python:
 
 sphinx:
   configuration: docs/source/conf.py
-
-bibtex_bibfiles:
-  - references.bib
