@@ -1,69 +1,129 @@
-import os
-import sys
-
 # Configuration file for the Sphinx documentation builder.
 
-# -- Project information
+# This file only contains a selection of the most common options. For a full
+# list see the documentation:
+# https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-project = 'NetworkVI'
-copyright = '2024, Lucas Arnoldt, Julius Upmeier zu Belzen, Luis Herrmann, Khue Nguyen, Fabian Theis, Benjamin Wild, Roland Eils'
-author = 'Lucas Arnoldt, Julius Upmeier zu Belzen, Luis Herrmann, Khue Nguyen, Fabian Theis, Benjamin Wild, Roland Eils'
+# -- Path setup --------------------------------------------------------------
+import sys
+from datetime import datetime
+from importlib.metadata import metadata
+from pathlib import Path
 
-release = '1.0.0'
-version = '1.0.0'
+HERE = Path(__file__).parent
+sys.path.insert(0, str(HERE / "extensions"))
 
-# -- General configuration
 
-master_doc = 'index'
+# -- Project information -----------------------------------------------------
 
+# NOTE: If you installed your project in editable mode, this might be stale.
+#       If this is the case, reinstall it to refresh the metadata
+info = metadata("networkvi")
+project_name = info["Name"]
+author = info["Author"]
+copyright = f"{datetime.now():%Y}, {author}."
+version = info["Version"]
+urls = dict(pu.split(", ") for pu in info.get_all("Project-URL"))
+repository_url = urls["Source"]
+
+# The full version, including alpha/beta/rc tags
+release = info["Version"]
+
+bibtex_bibfiles = ["references.bib"]
+templates_path = ["_templates"]
+nitpicky = True  # Warn about broken links
+needs_sphinx = "4.0"
+
+html_context = {
+    "display_github": True,  # Integrate GitHub
+    "github_user": "LArnoldt",
+    "github_repo": "https://github.com/LArnoldt/networkvi",
+    "github_version": "main",
+    "conf_py_path": "/docs/",
+}
+
+# -- General configuration ---------------------------------------------------
+
+# Add any Sphinx extension module names here, as strings.
+# They can be extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
-    'sphinx.ext.duration',
-    'sphinx.ext.doctest',
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.intersphinx',
-    'sphinxcontrib.bibtex',
-    "myst_parser",
     "myst_nb",
-    "sphinx.ext.napoleon",
-    "sphinx.ext.mathjax",
     "sphinx_copybutton",
-    "nbsphinx",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.napoleon",
+    "sphinxcontrib.bibtex",
+    "sphinx_autodoc_typehints",
+    "sphinx.ext.mathjax",
     "IPython.sphinxext.ipython_console_highlighting",
+    "sphinxext.opengraph",
+    *[p.stem for p in (HERE / "extensions").glob("*.py")],
 ]
 
-source_suffix = {
-    '.rst': 'restructuredtext',
-    '.md': 'markdown',
-    '.ipynb': 'myst-nb',
-}
-
-intersphinx_mapping = {
-    'python': ('https://docs.python.org/3/', None),
-    'sphinx': ('https://www.sphinx-doc.org/en/master/', None),
-}
-intersphinx_disabled_domains = ['std']
-
-templates_path = ['_templates']
-
-# -- Options for HTML output
-
-html_theme = 'sphinx_book_theme' #'sphinx_rtd_theme'
-
-# -- Options for EPUB output
-epub_show_urls = 'footnote'
-
-bibtex_bibfiles = ['references.bib']
-bibtex_reference_style = "author_year"
-
+autosummary_generate = True
+autodoc_member_order = "groupwise"
+default_role = "literal"
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = False
+napoleon_use_rtype = True  # having a separate entry generally helps readability
+napoleon_use_param = True
+myst_heading_anchors = 6  # create anchors for h1-h6
 myst_enable_extensions = [
-    "dollarmath",
     "amsmath",
     "colon_fence",
     "deflist",
+    "dollarmath",
     "html_image",
-    "colon_fence",
+    "html_admonition",
 ]
+myst_url_schemes = ("http", "https", "mailto")
+nb_output_stderr = "remove"
+nb_execution_mode = "off"
+nb_merge_streams = True
+typehints_defaults = "braces"
 
-nb_execution_mode = "off" #"auto"
-nb_execution_timeout = -1
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".ipynb": "myst-nb",
+    ".myst": "myst-nb",
+}
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "anndata": ("https://anndata.readthedocs.io/en/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+}
+
+# List of patterns, relative to source directory, that match files and
+# directories to ignore when looking for source files.
+# This pattern also affects html_static_path and html_extra_path.
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
+
+
+# -- Options for HTML output -------------------------------------------------
+
+# The theme to use for HTML and HTML Help pages.  See the documentation for
+# a list of builtin themes.
+#
+html_theme = "sphinx_book_theme"
+html_static_path = ["_static"]
+html_css_files = ["css/custom.css"]
+
+html_title = project_name
+
+html_theme_options = {
+    "repository_url": repository_url,
+    "use_repository_button": True,
+    "path_to_docs": "docs/",
+    "navigation_with_keys": False,
+}
+
+pygments_style = "default"
+
+nitpick_ignore = [
+    # If building the documentation fails because of a missing link that is outside your control,
+    # you can add an exception to this list.
+    #     ("py:class", "igraph.Graph"),
+]
