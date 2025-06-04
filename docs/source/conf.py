@@ -21,6 +21,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
     'sphinxcontrib.bibtex',
+    "myst_parser",
     "myst_nb",
     "sphinx.ext.napoleon",
     "sphinx.ext.mathjax",
