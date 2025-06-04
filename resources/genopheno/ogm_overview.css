@@ -1,0 +1,238 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  height: 100%;
+  font-size: 14px;
+}
+
+.d3-tooltip {
+  position: absolute;
+  z-index: 10;
+  visibility: hidden;
+  padding: 10px;
+  background: #666666bb;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #fff;
+}
+
+.left_half {
+  width: 500px;
+  height: 100%;
+  background: rgba(240,240,240,1);
+  position: absolute;
+  left: 0px;
+  overflow: hidden;
+}
+
+.right_half {
+  width: 100%;
+  height: 100%;
+  left: 500px;
+  position: absolute;
+}
+
+.header {
+  width: 500px;
+  color: rgb(0, 0, 0);
+  position: absolute;
+  top: 30px;
+  left: 40px;
+  font-family: Quicksand;
+  font-weight: 800;
+  font-size: 17px;
+  text-align: left;
+}
+
+.uleft_half {
+    width: 500px;
+    position: absolute;
+    top: 93px;
+    left: 40px;
+}
+.filter_header {
+  color: rgba(142,142,142,1);
+  position: relative;
+  font-family: Quicksand;
+  font-weight: Medium;
+  font-size: 24px;
+  text-align: left;
+}
+
+.cad {
+    position: relative;
+    top: 9px;
+}
+
+.cad_label {
+  width: 129px;
+  color: rgb(0, 0, 0);
+  position: relative;
+  font-family: Quicksand;
+  font-weight: 800;
+  font-size: 17px;
+  text-align: left;
+}
+
+.slide_bar {
+  width: 330px;
+}
+
+.slider {
+  -webkit-appearance: none;
+  position: relative;
+  top: 13px;
+  width: 100%;
+  height: 10px;
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+  border-radius: 12px;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none; 
+  appearance: none;
+  width: 22px;
+  height: 22px; 
+  background: #e46403;
+  cursor: pointer;
+  border-radius: 50px;
+}
+
+.curr_CAD {
+  width: 100%;
+  position: relative;
+  top: 20px;
+  font-size: 14px;
+  font-family: Quicksand;
+}
+
+.searchbox {
+  position: relative;
+  top: 55px;
+}
+
+.search_term_header {
+  color: rgb(0, 0, 0);
+  font-family: Quicksand;
+  font-weight: 800;
+  font-size: 17px;
+  text-align: left;
+}
+
+.searchbox input[type=text] {
+  margin-top: 12px;
+  height: 34px;
+  width: 234px;
+  border-radius: 6px;
+  border: 1px solid #666666bb;
+  font-size: 14px;
+  padding: 8px;
+  font-family: Quicksand;
+  color: #666666bb;
+  background: none;
+}
+
+.searchbox button {
+    height: 34px;
+    width: 86px;
+    margin-left: 12px;
+    border-radius: 6px;
+    border: 1px solid #cf5b03;
+    background: none;
+    font-size: 14px;
+    font-family: Quicksand;
+    color: #cf5b03;
+}
+
+.searchbox button:hover {
+  background-color: #c7570217;
+}
+
+.division_bar {
+  width: 500px;
+  height: 1px;
+  background: rgba(196,196,196,1);
+  /* opacity: 1; */
+  position: absolute;
+  top: 345px;
+  left: 0px;
+  overflow: hidden;
+}
+
+.lleft_half {
+  width: 500px;
+  position: absolute;
+  top: 376px;
+  left: 40px;
+}
+
+.chart_header {
+  color: rgba(142,142,142,1);
+  font-family: Quicksand;
+  font-weight: Medium;
+  font-size: 24px;
+  /* opacity: 1; */
+  text-align: left;
+}
+
+.term_name {
+  color: rgb(0, 0, 0);
+  position: relative;
+  font-family: Quicksand;
+  top: 9px;
+  font-weight: 800;
+  font-size: 17px;
+  /* opacity: 1; */
+  text-align: left;
+}
+
+.right_half button {
+  width: 86px;
+  color: rgba(198,88,2,1);
+  position: fixed;
+  top: 28px;
+  right: 40px;
+  /* left: 100%-40px; */
+  height: 34px;
+  text-align: center;
+  border-radius: 6px;
+  border: 1px solid #cf5b03;
+  font-size: 14px;
+  font-family: Quicksand;
+  color: #cf5b03;
+  background: none;
+}
+
+.right_half button:hover {
+  background-color: #c7570217;
+}
+
+.node circle {
+  fill: #FFF;
+  stroke: #CCC;
+  stroke-width: 1px;
+}
+
+.node text {
+  text-shadow: -4px 0 white, 0 4px white, 4px 0 white, 0 -4px white;
+  font-size: 10px;
+}
+
+.link {
+  fill: none;
+  stroke: #CCC;
+  stroke-opacity: 0.4;
+  stroke-width: 1.5px;
+}
+
+.selection {
+  position: relative;
+  top: 80px;
+}

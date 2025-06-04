@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link href="https://fonts.googleapis.com/css?family=Quicksand&display=swap" rel="stylesheet" />
+  <style>{$style$}</style>
+  <title>OGM 2021</title>
+</head>
+
+<body>
+  <div class="left_half"><span class="header">Omnigenetic Model 2021</span>
+    <div class="uleft_half">
+      <div class="filter_header">Filtering</div>
+      <div class="cad">
+        <label class="cad_label" for="label">CAD Correlation</label>
+        <div class="slide_bar">
+          <input id="slide" type="range" name="label" min="0" max="0.2" step='.01' onchange="filterLabel(this.value)"
+            oninput="updateCAD(this.value)" value="0" class="slider">
+          <div class="curr_CAD"></div>
+        </div>
+      </div>
+      <div class="searchbox">
+        <label class="search_term_header" for="search">Search term:</label>
+        <div>
+          <input type="text" method="put" placeholder="Term name or ID" name="search" id="q">
+          <button type="submit" onclick="filterSearch();">Submit</button>
+        </div>
+      </div>
+      <div class="selection">
+        <div class="chart_header">Label selection</div>
+        <div id="dropdown"></div>
+    </div>
+    </div>
+    <div class="lleft_half">
+      <div class="chart_header">Node details</div>
+      <div class="term_name"></div>
+      <div id="bar_chart"></div>
+    </div>
+  </div>
+  <div class="right_half">
+    <button type="button" onclick="resetGraph()">Clear</button>
+    <svg width="100%" height="100%" id="ontology"></svg>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.15.0/d3.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-tip/0.9.1/d3-tip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3-dag@0.3.4/dist/d3-dag.min.js"></script>
+  <script>
+    var data = {$dag_data$};
+    var label_name = "label";
+
+    // Handler for dropdown value change
+    var dropdownChange = function() {
+                    label_name = d3.select(this).property('value');
+                    collapse(root);
+                    update(root);
+                };
+
+    var dropdown = d3.select("#dropdown")
+                    .append("select", "dropdown")
+                    .on("change", dropdownChange);
+    dropdown.selectAll('select').data(data.labels)
+                  .enter().append("option")
+                    .attr("value", function (d) { return d; })
+                    .text(function (d) { return d; })
+                    .attr("selected", function (d) { return d == 'label'; })
+
+    function sortRec(d) {
+      d.children.sort(function (a, b) { return d3.ascending(a.data.predictors[label_name], b.data.predictors[label_name]); });
+    }
+
+    function resetGraph() {
+      collapse(root);
+      uncollapse(root);
+      update(root);
+      document.getElementById("slide").value = 0;
+      d3.select('.curr_CAD').text('');
+      document.getElementById("q").value = '';
+    }
+
+    function filterSearch() {
+      var value = document.getElementById("q").value;
+      var node = all_nodes.find(n => n.id == value || n.data.name == value);
+      if (is_extendable(node)) {
+        uncollapse(node);
+        update(node);
+      }
+      if (node != undefined) document.getElementById("q").value = '';
+    }
+
+    function updateCAD(value) {
+      d3.select('.curr_CAD').text(value);
+    }
+    function filterLabel(value) {
+      collapse(root);
+      uncollapse(root);
+      update(root);
+      uncollapse_by_value(root, value);
+    }
+
+    function uncollapse_by_value(n, value) {
+      var children_filtered = n.children.filter(ch => ch.data.predictors[label_name] > value);
+      children_filtered.forEach(
+        node => {
+          if (is_extendable(node)) {
+            uncollapse(node);
+            update(node);
+          }
+          uncollapse_by_value(node, value);
+        }
+      )
+    }
+
+    var labels = data.labels;
+
+    var tooltip = d3
+      .select('body')
+      .append('div')
+      .attr('class', 'd3-tooltip');
+
+    // Set the dimensions and margins of the diagram
+    var margin = { top: 20, right: 120, bottom: 30, left: 120 },
+      width = 1200 - margin.left - margin.right,
+      height = 800 - margin.top - margin.bottom;
+
+    // append the svg object to the body of the page
+    // appends a 'group' element to 'svg'
+    // moves the 'group' element to the top left margin
+    // const svg = d3.select("svg")
+    const svg = d3.select("#ontology")
+      .call(d3.zoom().on("zoom", function () {
+        svg.attr("transform", d3.event.transform)
+      }))
+      .append("g")
+      .attr("transform", "translate("
+        + margin.left + "," + margin.top + ")");
+
+
+    var i = 0,
+      duration = 750,
+      x_sep = 120,
+      y_sep = 8;
+
+    // declare a dag layout
+    var tree = d3.sugiyama()
+      .nodeSize([y_sep, x_sep])
+      .layering(d3.layeringSimplex())
+      .decross(d3.decrossOpt)
+      .coord(d3.coordVert())
+      .separation(
+        (a, b) => { return 1 }
+      );
+
+    // make dag from edge list
+    dag = d3.dagConnect()(data.links);
+
+    // in order to make the family tree work, the dag
+    // must be a node with id undefined. create that node if
+    // not done automaticaly
+    if (dag.id != undefined) {
+      root = dag.copy();
+      root.id = undefined;
+      root.children = [dag];
+      dag = root;
+    }
+
+    // prepare node data
+    var all_nodes = dag.descendants()
+    all_nodes.forEach(n => {
+      n.data = data.nodes[n.id];
+      n._children = n.children; // all nodes collapsed by default
+      n.children = [];
+
+      n._parents = n.data.parents;
+      n.parents = []
+      n.collapsed_parents = [];
+      n.visible = false;
+    });
+
+    // find root node and assign data
+    root = all_nodes.find(n => n.id == data.root);
+    root.visible = true;
+    root.children = root._children;
+    root._children = [];
+    // uncollapse first level
+    root.children.forEach(
+      n => {
+        n.visible = true;
+        n.parents.push(root.id);
+        n._parents = n._parents.filter(node => node != root.id);
+      }
+    )
+    root.x0 = height / 2;
+    root.y0 = 0; // padding
+    // overwrite dag root nodes
+    dag.children = [root];
+    sortRec(root);
+
+    // draw dag
+    update(root);
+
+    // function filterLabel(value) {
+    //   filterNodes(root, function (d) { return d.data.predictors[label_name] > value; })
+    //   update(root);
+    // }
+
+    // collapse a node
+    function collapse(d) {
+      // if (d.parents.includes(root.id)) return;
+
+      // collapse neighbors which are visible and have been inserted by this node
+      var vis_inserted_children = d.children.filter(n => n.parents.length == 1);
+      vis_inserted_children.forEach(
+        n => {
+          n.visible = false;
+          d._children.push(n);
+          n._parents.push(d.id);
+          n.parents = [];
+          d.children = d.children.filter(node => node != n);
+          collapse_children(n);
+        }
+      )
+      var inserted_children_more_parents = d.children;
+      inserted_children_more_parents.forEach(
+        n => {
+          if (n.parents.length - n.collapsed_parents.length == 1) {
+            var parents = n.parents;
+            parents.forEach(
+              pr_id => {
+                var pr = all_nodes.find(p => p.id == pr_id);
+                pr.children = pr.children.filter(node => node != n);
+                pr._children.push(n);
+                n._parents.push(pr_id);
+              }
+            )
+            n.collapsed_parents = [];
+            n.parents = [];
+            collapse_children(n);
+          } else {
+            if (!n.collapsed_parents.includes(d)) n.collapsed_parents.push(d);
+          }
+        }
+      )
+    }
+
+    function collapse_children(d) {
+      var vis_inserted_children = d.children;
+      vis_inserted_children.forEach(
+        n => {
+          if (n.parents.length == 1) {
+            n.visible = false;
+          }
+          d._children.push(n);
+          n._parents.push(d.id);
+          n.parents = n.parents.filter(node => node != d.id);
+          collapse_children(n);
+        }
+      )
+      d.children = [];
+    }
+
+
+    // uncollapse a node
+    function uncollapse(d) {
+
+      if (d == undefined) return;
+
+      if (!d._parents.includes(root.id)) uncollapseParents(d);
+
+      if (d._children.length != 0) {
+        var children = d._children;
+        children.forEach(
+          n => {
+            n.visible = true;
+            d.children.push(n);
+            n.parents.push(d.id);
+            // n._parents.remove(d);
+            n._parents = n._parents.filter(node => node != d.id);
+            n.collapsed_parents = n.collapsed_parents.filter(node => node != d);
+          }
+        );
+        d._children = [];
+      }
+
+      var children = d.children;
+      children.forEach(
+        n => {
+          n.collapsed_parents = n.collapsed_parents.filter(node => node != d);
+          var vis_unconnected_parents = n._parents;
+          vis_unconnected_parents.forEach(
+            pr_str => {
+              var pr = all_nodes.find(node => node.id == pr_str);
+              if (pr.visible) {
+                pr.children.push(n);
+                pr._children = pr._children.filter(node => node != n);
+                n.parents.push(pr_str);
+                n._parents = n._parents.filter(node => node != pr_str);
+              }
+            }
+          )
+        }
+      )
+    }
+    function uncollapseParents(c) {
+      if (c == root || c.parents.includes(root.id)) return;
+      if (c.parents.length != 0) {
+        var parentsShow = c.parents;
+        parentsShow.forEach(
+          n => {
+            var pr = all_nodes.find(p => p.id == n);
+            uncollapseParents(pr);
+          }
+        );
+      }
+
+      if (c._parents.length != 0) {
+        var parentsHidden = c._parents;
+        parentsHidden.forEach(
+          n => {
+            c.parents.push(n);
+            var pr = all_nodes.find(p => p.id == n);
+            pr.visible = true;
+            pr.children.push(c);
+            pr._children = pr._children.filter(node => node != c);
+            uncollapseParents(pr);
+          }
+        );
+        c._parents = [];
+      }
+      c.collapsed_parents = [];
+    }
+
+
+    function is_extendable(node) {
+      if (node._children.length > 0 || node._parents.length > 0 || node.collapsed_parents.length > 0) return true;
+      if (node.children.length > 0) {
+        for (const ch of node.children) {
+          if (ch.collapsed_parents.includes(node)) return true;
+        }
+      }
+      return false;
+    }
+
+    function getDescendants(node, accum) {
+      accum = accum || [];
+      var hid_children = node._children;
+      hid_children.forEach(
+        n => {
+          if (!accum.includes(n)) accum.push(n);
+          getDescendants(n, accum)
+        }
+      )
+      return accum;
+    }
+
+    function getAncestors(node, accum) {
+      accum = accum || [];
+      var hid_parents = node._parents;
+      hid_parents.forEach(
+        pr_str => {
+          pr = all_nodes.find(n => n.id == pr_str)
+          if (!accum.includes(pr)) accum.push(pr);
+          getAncestors(pr, accum)
+        }
+      )
+      return accum;
+    }
+
+    function update(source) {
+
+      // Assigns the x and y position for the nodes
+      var dag_tree = tree(dag),
+        nodes = dag.descendants(),
+        links = dag.links()
+
+      // ****************** Nodes section **************************
+      // Update the nodes...
+      var node = svg.selectAll('g.node')
+        .data(nodes, function (d) { return d.id || (d.id = ++i); })
+
+      // Normalize for fixed-depth.
+      nodes.forEach(function (d) { d.y = d.data.depth * 180 });
+
+      // Enter any new modes at the parent's previous position.
+      var nodeEnter = node.enter().append('g')
+        .attr('class', 'node')
+        .attr("transform", function (d) {
+          return "translate(" + source.y0 + "," + source.x0 + ")";
+        })
+        .on('click', click)
+        .on('mouseover', function (d, i) {
+          console.log(d);
+          var vis_descendants = getDescendants(d).filter(n => n.visible && !d.children.includes(n));
+          var descendants_str = "Descendants: ";
+          if (vis_descendants.length == 0) descendants_str += "None"
+          else vis_descendants.forEach(
+            des => { descendants_str += des.id + " - " + truncate_tooltip(des.data.name) + "; " }
+          )
+          var vis_ancestors = getAncestors(d).filter(n => n.visible && !d.parents.includes(n.id));
+          var ancestors_str = "Ancestors: ";
+          if (vis_ancestors.length == 0) ancestors_str += "None"
+          else vis_ancestors.forEach(
+            anc => { ancestors_str += anc.id + " - " + truncate_tooltip(anc.data.name) + "; " }
+          )
+          tooltip
+            .html(
+              `<div>${d.id} - ${d.data.name}</div><div> ${descendants_str}</div><div> ${ancestors_str}</div>`
+            )
+            .style('visibility', 'visible');
+          showBarChart(d);
+        })
+        .on('mousemove', function () {
+          tooltip
+            .style('top', d3.event.pageY - 10 + 'px')
+            .style('left', d3.event.pageX + 10 + 'px');
+        })
+        .on("mouseout", function () {
+          // d3.select(this).select('text.info').remove();
+          tooltip.html(``).style('visibility', 'hidden');
+        });
+
+
+      function truncate(str, n) {
+        return (str.length > n) ? str.substr(0, n - 1) + '…' : str;
+      };
+
+      function truncate_tooltip(name) {
+        return (name.length > 20) ? (name.slice(0,10) + '…' + name.slice(-10)) : name;
+      }
+
+      function cmap(p) {
+        p_max = 0.1
+        c = 255 - 255 * (p / p_max)
+        return "rgb(255, " + c + ", " + c + ")"
+      }
+
+      // Add Circle for the nodes
+      nodeEnter.append('circle')
+        .attr('r', 1e-6)
+        .style('fill', function (d) { return cmap(d.data.predictors[label_name]); })
+        .attr("class", "node")
+
+      // Add labels for the nodes
+      nodeEnter.append('text')
+        .attr("dy", ".35em")
+        .attr("x", function (d) {
+          return d.parent ? 13 : -13; // used to be -13
+        })
+        .attr("text-anchor", function (d) {
+          return d.parent ? "start" : "end"; // used to be end
+        })
+
+      // UPDATE
+      var nodeUpdate = nodeEnter.merge(node);
+
+      // Transition to the proper position for the node
+      nodeUpdate.transition()
+        .duration(duration)
+        .attr("transform", function (d) {
+          return "translate(" + d.y + "," + d.x + ")";
+        });
+
+      // Update the node attributes and style
+      nodeUpdate.select('circle.node')
+        .attr('r', 4);
+
+      nodeUpdate.select('text')
+        .text(function (d) { return (is_extendable(d) ? "[+] " : "") + truncate(d.data.name, 30); });
+
+      nodeUpdate.attr('cursor', 'pointer');
+
+      // Remove any exiting nodes
+      var nodeExit = node.exit().transition()
+        .duration(duration)
+        .attr("transform", function (d) {
+          return "translate(" + source.y + "," + source.x + ")";
+        })
+        .attr('visible', false)
+        .remove();
+
+      // On exit reduce the node circles size to 0
+      nodeExit.select('circle')
+        .attr('r', 1e-6);
+
+      // On exit reduce the opacity of text labels
+      nodeExit.select('text')
+        .style('fill-opacity', 1e-6);
+
+      // ****************** links section ***************************
+
+      // Update the links...
+      var link = svg.selectAll('path.link')
+        .data(links, function (d) { return d.source.id + d.target.id });
+
+      // Enter any new links at the parent's previous position.
+      var linkEnter = link.enter().insert('path', "g")
+        .attr("class", "link")
+        .attr('d', function (d) {
+          var o = { x: source.x0, y: source.y0 }
+          return diagonal(o, o)
+        });
+
+      // UPDATE
+      var linkUpdate = linkEnter.merge(link);
+
+      // Transition back to the parent element position
+      linkUpdate.transition()
+        .duration(duration)
+        .attr('d', d => diagonal(d.source, d.target));
+
+      // Remove any exiting links
+      var linkExit = link.exit().transition()
+        .duration(duration)
+        .attr('d', function (d) {
+          var o = { x: source.x, y: source.y }
+          return diagonal(o, o)
+        })
+        .remove();
+
+      // expanding a big subgraph moves the entire dag out of the window
+      // to prevent this, cancel any transformations in y-direction
+      // svg.transition()
+      //   .duration(duration)
+      //   .call(
+      //     zoom.transform,
+      //     d3.zoomTransform(svg.node()).translate(-(source.y - source.y0), -(source.x - source.x0)),
+      //   );
+
+      // Store the old positions for transition.
+      nodes.forEach(function (d) {
+        d.x0 = d.x;
+        d.y0 = d.y;
+      });
+
+      // Creates a curved (diagonal) path from parent to the child nodes
+      function diagonal(s, d) {
+
+        path = `M ${s.y} ${s.x}
+                  C ${(s.y + d.y) / 2} ${s.x},
+                    ${(s.y + d.y) / 2} ${d.x},
+                    ${d.y} ${d.x}`
+
+        return path
+      }
+
+      function showBarChart(d) {
+        var data1 = [
+        ];
+        for (var key in d.data.predictors) {
+          data1.push({ group: key, value: d.data.predictors[key] })
+        }
+
+        updateBarChart(data1)
+        d3.select('.term_name').text(d.data.name)
+      }
+
+      // Toggle parents, children on click.
+      function click(d) {
+
+        if (is_extendable(d)) {
+          uncollapse(d);
+          sortRec(d);
+        }
+        else collapse(d)
+
+        update(d);
+      }
+
+    }
+
+    // create 2 data_set
+
+    var data1 = [
+    ];
+    for (var key in labels) {
+      data1.push({ group: labels[key], value: 0 })
+    }
+    console.log(data1)
+
+    // set the dimensions and margins of the graph
+    var margin = { top: 30, right: 30, bottom: 250, left: 30 },
+      width = 460 - margin.left - margin.right,
+      height = 600 - margin.top - margin.bottom;
+
+    // append the svg object to the body of the page
+    var svgBarChart = d3.select("#bar_chart")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform",
+        "translate(" + margin.left + "," + margin.top + ")");
+
+    var x = d3.scaleBand()
+      .range([0, width])
+      .domain(data1.map(function (d) { return d.group; }))
+      .padding(0.2);
+
+    var xAxis = svgBarChart.append("g")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x))
+      .selectAll("text")
+      .call(truncateLabel)
+      .attr("y", 5)
+      .attr("x", 9)
+      .attr("dy", ".35em")
+      .attr("transform", "rotate(60)")
+      .style("text-anchor", "start");
+
+
+    function truncateLabel(text) {
+      text.each(function () {
+        label = d3.select(this).text();
+        if (label.length > 20) {
+          label = label.slice(0, 20) + "..."
+        }
+        d3.select(this).text(label)
+      })
+    }
+
+    // Add Y axis
+    var y = d3.scaleLinear()
+      .domain([0, 0.3])
+      .range([height, 0]);
+
+    var yAxis = svgBarChart.append("g")
+      .attr("class", "myYaxis")
+      .call(d3.axisLeft(y));
+
+    // A function that create / update the plot for a given variable:
+    function updateBarChart(data) {
+
+      var u = svgBarChart.selectAll("rect")
+        .data(data)
+
+      u
+        .enter()
+        .append("rect")
+        .merge(u)
+        .transition()
+        .duration(1000)
+        .attr("x", function (d) { return x(d.group); })
+        .attr("y", function (d) { return y(d.value); })
+        .attr("width", x.bandwidth())
+        .attr("height", function (d) { return height - y(d.value); })
+        .attr("fill", "#e46403")
+    }
+  </script>
+</body>
+
+</html>

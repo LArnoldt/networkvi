@@ -1,0 +1,4 @@
+sphinx
+sphinx-rtd-theme
+torch
+torch-sparse @ https://data.pyg.org/whl/torch-2.1.0+cu118/torch_sparse-0.6.17%2Bcu118-cp310-cp310-linux_x86_64.whl

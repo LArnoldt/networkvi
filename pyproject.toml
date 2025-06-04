@@ -1,0 +1,189 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+
+[project]
+name = "networkvi"
+version = "0.1.0"
+description = "Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration"
+readme = "README.md"
+requires-python = ">=3.9,<3.12"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Lucas Arnoldt, Julius Upmeier zu Belzen, Luis Herrmann, Khue Nguyen, Fabian Theis, Bejamin Wild, Roland Eils"},
+]
+maintainers = [
+    {name = "Lucas Arnoldt", email = "lucas.arnoldt@helmholtz-munich.de"},
+]
+urls.Documentation = "https://networkvi.readthedocs.io"
+urls.Source = "https://github.com/LArnoldt/networkvi"
+urls.Home-page = "https://networkvi.readthedocs.io"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Natural Language :: English",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+    "docrep>=0.3.2",
+    "flax",
+    "lightning>=2.0",
+    "ml-collections>=0.1.1",
+    "mudata>=0.1.2",
+    "numpyro>=0.12.1",
+    "pyro-ppl>=1.6.0",
+    "rich>=12.0.0",
+    "scikit-learn>=0.21.2",
+    "sparse>=0.14.0",
+    "tensorboard>=2.0",
+    "torchmetrics>=0.11.0",
+    "xarray>=2023.2.0",
+    "pqdm",
+    "prettytable",
+    "goatools",
+    "muon",
+    "tabulate",
+    "addict",
+    "torch==2.2.0"
+]
+
+
+[project.optional-dependencies]
+docs = [
+    "docutils>=0.8,!=0.18.*,!=0.19.*", # see https://github.com/scverse/cookiecutter-scverse/pull/205
+    "sphinx>=4.1",
+    "ipython",
+    "sphinx-book-theme>=1.0.1",
+    "sphinx_copybutton",
+    "sphinx-design",
+    "sphinxext-opengraph",
+    "sphinx-hoverxref",
+    "sphinxcontrib-bibtex>=1.0.0",
+    "myst-parser",
+    "myst-nb",
+    "sphinx-autodoc-typehints",
+    "nbsphinx",
+]
+docsbuild = ["networkvi[docs]"]
+
+# networkvi.hub.HubModel.pull_from_s3
+aws = ["boto3"]
+# networkvi.data.cellxgene
+census = ["cellxgene-census"]
+# networkvi.hub dependencies
+hub = ["huggingface_hub"]
+# networkvi.model.utils.mde dependencies
+pymde = ["pymde"]
+# networkvi.data.add_dna_sequence
+regseq = ["biopython>=1.81", "genomepy"]
+# read loom
+loompy = ["loompy>=3.0.6"]
+# networkvi.criticism and read 10x
+scanpy = ["scanpy>=1.6"]
+
+tutorials = [
+    "gdown",
+    "jupyter",
+]
+
+all = ["networkvi[docs,tutorials]"]
+
+[tool.hatch.build.targets.wheel]
+packages = ['src/networkvi']
+
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+[tool.ruff.lint]
+select = [
+    "F",  # Errors detected by Pyflakes
+    "E",  # Error detected by Pycodestyle
+    "W",  # Warning detected by Pycodestyle
+    "I",  # isort
+    "D",  # pydocstyle
+    "B",  # flake8-bugbear
+    "TID",  # flake8-tidy-imports
+    "C4",  # flake8-comprehensions
+    "BLE",  # flake8-blind-except
+    "UP",  # pyupgrade
+    "RUF100",  # Report unused noqa directives
+]
+ignore = [
+    # allow I, O, l as variable names -> I is the identity matrix
+    "E741",
+    # Missing docstring in public package
+    "D104",
+    # Missing docstring in public module
+    "D100",
+    # Missing docstring in __init__
+    "D107",
+    # Errors from function calls in argument defaults. These are fine when the result is immutable.
+    "B008",
+    # __magic__ methods are are often self-explanatory, allow missing docstrings
+    "D105",
+    # first line should end with a period [Bug: doesn't work with single-line docstrings]
+    "D400",
+    # First line should be in imperative mood; try rephrasing
+    "D401",
+    ## Disable one in each pair of mutually incompatible rules
+    # We don’t want a blank line before a class docstring
+    "D203",
+    # We want docstrings to start immediately after the opening triple quote
+    "D213",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"docs/*" = ["I", "BLE001"]
+"tests/*" = ["D"]
+"*/__init__.py" = ["F401"]
+"src/networkvi/__init__.py" = ["I"]
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+
+
+[tool.jupytext]
+formats = "ipynb,md"
