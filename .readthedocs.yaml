@@ -4,9 +4,7 @@ build:
   os: ubuntu-20.04
   tools:
     python: "3.10"
-  commands:
-    - pip install torch==2.2.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
-    - pip install torch-sparse -f https://data.pyg.org/whl/torch-2.2.0+cpu.html
+
 sphinx:
   configuration: docs/conf.py
   # disable this for more lenient docs builds
