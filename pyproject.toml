@@ -6,7 +6,7 @@ requires = ["hatchling"]
 [project]
 name = "networkvi"
 version = "0.1.0"
-description = "Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration"
+description = "Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration and Mechanistic Discovery"
 readme = "README.md"
 requires-python = ">=3.9,<3.12"
 license = {file = "LICENSE"}

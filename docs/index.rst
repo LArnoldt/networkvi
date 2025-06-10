@@ -1,4 +1,4 @@
-Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration
+Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration and Mechanistic Discovery
 =============================================================================================
 
 **NetworkVI** is a sparse deep generative model designed for the integration and interpretation of multimodal single-cell data.
@@ -10,7 +10,7 @@ Check out the :doc:`api` and :doc:`tutorials` section for further information.
 
 If you use NetworkVI, please consider citing:
 
-Arnoldt, L., Upmeier zu Belzen, J., Herrmann, L., Nguyen, K., Theis, F.J., Wild, B. , Eils, R., "Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration", bioRxiv, June 2025.
+Arnoldt, L., Upmeier zu Belzen, J., Herrmann, L., Nguyen, K., Theis, F.J., Wild, B. , Eils, R., "Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration and Mechanistic Discovery", bioRxiv, June 2025.
 
 Installation
 ------------
