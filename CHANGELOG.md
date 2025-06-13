@@ -4,6 +4,6 @@ Starting from version 0.20.1, this format is based on [Keep a Changelog], and th
 to [Semantic Versioning]. Full commit history is available in the
 [commit logs](https://github.com/scverse/scvi-tools/commits/).
 
-## Version 1.0 (Released)
+## Version 0.1.0 (Released)
 
--
+First version.
