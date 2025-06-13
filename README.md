@@ -46,7 +46,7 @@ Please find the [release notes](https://networkvi.readthedocs.io/docs/build/html
 
 ## Contact
 
-If you found a bug, please use the [issue tracker](https://github.com/LArnoldt/networkvi/issues). If you use `NetworkVI` in your research, please consider citing:
+If you found a bug, please use the [issue tracker](https://github.com/LArnoldt/networkvi/issues). If you use `NetworkVI` in your research, please consider citing the [preprint](https://www.biorxiv.org/content/10.1101/2025.06.10.657924v1):
 
 ```
 Arnoldt, L., Upmeier zu Belzen, J., Herrmann, L., Nguyen, K., Theis, F.J., Wild, B. , Eils, R., "Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration and Mechanistic Discovery", bioRxiv, June 2025.
