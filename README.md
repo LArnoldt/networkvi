@@ -8,10 +8,10 @@
 ## Getting started
 
 `NetworkVI` is a sparse deep generative model designed for the paired, vertical (shared cells across measurements), horizontal (shared features across datasets) or mosaic integration and interpretation of multimodal single-cell data. The model learns a rich, batch-corrected low-dimensional representation of bi- and trimodal single-cell count datasets, estimating the representation using normalized input data. Please refer to the [documentation](https://networkvi.readthedocs.io/en/latest/). We also provide [tutorials](https://networkvi.readthedocs.io/en/latest/tutorials.html):
-- [Paired integration and query-to-reference mapping](https://networkvi.readthedocs.io/en/latest/notebooks/paired_integration_and_query_mapping)
-- [Mosaic integration](https://networkvi.readthedocs.io/en/latest/notebooks/mosaic_integration)
-- [Interpretability: Inference of GO importances and Gene-GO associations](https://networkvi.readthedocs.io/en/latest/notebooks/go_analysis)
-- [Interpretability: Infernce of GO term-specific covariate attention values](https://networkvi.readthedocs.io/en/latest/notebooks/go_specific_covariate_attention)
+- [Paired integration and query-to-reference mapping](https://networkvi.readthedocs.io/en/latest/notebooks/paired_integration_and_query_mapping.html)
+- [Mosaic integration](https://networkvi.readthedocs.io/en/latest/notebooks/mosaic_integration.html)
+- [Interpretability: Inference of GO importances and Gene-GO associations](https://networkvi.readthedocs.io/en/latest/notebooks/go_analysis.html)
+- [Interpretability: Infernce of GO term-specific covariate attention values](https://networkvi.readthedocs.io/en/latest/notebooks/go_specific_covariate_attention.html)
 
 ## Installation
 
@@ -42,7 +42,7 @@ Please find the [API](https://networkvi.readthedocs.io/en/latest/api.html) here.
 
 ## Release notes
 
-Please find the [release notes](https://networkvi.readthedocs.io/en/latest/release_notes.html) here.
+Please find the [release notes](http://networkvi.readthedocs.io/en/latest/changelog.html) here.
 
 ## Contact
 
