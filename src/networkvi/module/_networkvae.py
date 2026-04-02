@@ -371,6 +371,8 @@ class NETWORKVAE(BaseModuleClass):
         * ``'pp'`` - Protein-Protein
         * ``'tf'`` - Transcription Factor
         * ``'tad'`` - Topologically Associated Domains
+    gene_interaction_layer_nlayers
+        Number of layers of gene interaction layer.
     standard_gene_size
         Standard size of gene nodes in Gene Layers.
     standard_go_size
@@ -379,6 +381,8 @@ class NETWORKVAE(BaseModuleClass):
         Path .obo file of GO.
     map_ensembl_go
         List of .gaf files with mappings of Ensembl IDs to GO.
+    filter_namespace
+        Filter namespaces of ontology( hierarchy (e.g. molecular_function of GO).
     keep_activations
         Bool, whether keep activations in fully-connected encoder layers.
     use_mean_mixing
@@ -457,10 +461,12 @@ class NETWORKVAE(BaseModuleClass):
         protein_gene_layer_type: Literal["none", "standard", "interaction"] = "interaction",
         library_size_layers_type: Literal["linear", "go"] = "go",
         gene_layer_interaction_source: Optional[str] = None,
+        gene_interaction_layer_nlayers: Optional[int] = 1,
         standard_gene_size: int = 4,
         standard_go_size: int = 6,
         obo_file: Optional[str] = None,
         map_ensembl_go: Optional[Union[list, np.ndarray]] = None,
+        filter_namespace: bool = True,
         n_continuous_cov: int = 0,
         n_cats_per_cov: Optional[Iterable[int]] = None,
         dropout_rate: float = 0.1,
@@ -518,10 +524,12 @@ class NETWORKVAE(BaseModuleClass):
         #self.accessibility_library_size_gene_layer_type = accessibility_library_size_gene_layer_type
         #self.protein_library_size_gene_layer_type = protein_library_size_gene_layer_type
         self.gene_layer_interaction_source = gene_layer_interaction_source
+        self.gene_interaction_layer_nlayers = gene_interaction_layer_nlayers
         self.standard_gene_size = standard_gene_size
         self.standard_go_size = standard_go_size
         self.obo_file = obo_file
         self.map_ensembl_go = map_ensembl_go
+        self.filter_namespace = filter_namespace
         self.n_cats_per_cov = n_cats_per_cov
         self.n_continuous_cov = n_continuous_cov
         self.dropout_rate = dropout_rate
@@ -612,6 +620,7 @@ class NETWORKVAE(BaseModuleClass):
             standard_go_size=self.standard_go_size,
             obo_file=self.obo_file,
             map_ensembl_go=self.map_ensembl_go,
+            filter_namespace=self.filter_namespace,
             sparsities=self.sparsities,
             dynamic=self.dynamic,
             dynamic_update_rate=self.dynamic_update_rate,
@@ -621,6 +630,7 @@ class NETWORKVAE(BaseModuleClass):
             gene_interaction_layer_dynamic_update_rate=self.gene_interaction_layer_dynamic_update_rate,
             gene_interaction_layer_dynamic_end_update_rate=self.gene_interaction_layer_dynamic_end_update_rate,
             gene_interaction_layer_dynamic_save_path=os.path.join(self.gene_interaction_layer_dynamic_save_path,"expression") if self.gene_interaction_layer_dynamic_save_path else None,
+            gene_interaction_layer_nlayers=self.gene_interaction_layer_nlayers,
             keep_activations=self.keep_activations,
         )
 
@@ -702,6 +712,7 @@ class NETWORKVAE(BaseModuleClass):
             standard_go_size=self.standard_go_size,
             obo_file=self.obo_file,
             map_ensembl_go=self.map_ensembl_go,
+            filter_namespace=self.filter_namespace,
             sparsities=self.sparsities,
             dynamic=self.dynamic,
             dynamic_update_rate=self.dynamic_update_rate,
@@ -711,6 +722,7 @@ class NETWORKVAE(BaseModuleClass):
             gene_interaction_layer_dynamic_update_rate=self.gene_interaction_layer_dynamic_update_rate,
             gene_interaction_layer_dynamic_end_update_rate=self.gene_interaction_layer_dynamic_end_update_rate,
             gene_interaction_layer_dynamic_save_path=os.path.join(self.gene_interaction_layer_dynamic_save_path,"accessibility") if self.gene_interaction_layer_dynamic_save_path else None,
+            gene_interaction_layer_nlayers=self.gene_interaction_layer_nlayers,
             keep_activations=self.keep_activations,
         )
 
@@ -825,6 +837,7 @@ class NETWORKVAE(BaseModuleClass):
             standard_go_size=self.standard_go_size,
             obo_file=self.obo_file,
             map_ensembl_go=self.map_ensembl_go,
+            filter_namespace=self.filter_namespace,
             sparsities=self.sparsities,
             dynamic=self.dynamic,
             dynamic_update_rate=self.dynamic_update_rate,
@@ -834,6 +847,7 @@ class NETWORKVAE(BaseModuleClass):
             gene_interaction_layer_dynamic_update_rate=self.gene_interaction_layer_dynamic_update_rate,
             gene_interaction_layer_dynamic_end_update_rate=self.gene_interaction_layer_dynamic_end_update_rate,
             gene_interaction_layer_dynamic_save_path=os.path.join(self.gene_interaction_layer_dynamic_save_path,"protein") if self.gene_interaction_layer_dynamic_save_path else None,
+            gene_interaction_layer_nlayers=self.gene_interaction_layer_nlayers,
             keep_activations=self.keep_activations,
         )
 

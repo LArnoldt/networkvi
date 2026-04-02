@@ -1,0 +1,30 @@
+[workspace]
+name = "networkvi"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[system-requirements]
+cuda = "12"
+
+[dependencies]
+python = ">=3.9,<3.14"
+pip = "*"
+ipykernel = "*"
+nbclassic = ">=1.3.3,<2"
+gdown = ">=5.2.0,<6"
+
+[pypi-options]
+index-url = "https://pypi.org/simple"
+extra-index-urls = ["https://download.pytorch.org/whl/cu126"]
+find-links = [
+  { url = "https://data.pyg.org/whl/torch-2.8.0+cu126.html" }
+]
+index-strategy = "unsafe-best-match"
+
+[pypi-dependencies]
+torch = "==2.8.0"
+torch-scatter = "*"
+torch-sparse = "*"
+
+# Install networkvi from the local checkout
+networkvi = { path = ".", editable = true }

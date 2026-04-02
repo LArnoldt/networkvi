@@ -1,16 +1,12 @@
-[build-system]
-build-backend = "hatchling.build"
-requires = ["hatchling"]
-
 [project]
 name = "networkvi"
-version = "0.1.0"
+version = "0.1.1"
 description = "Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration and Mechanistic Discovery"
 readme = "README.md"
-requires-python = ">=3.9,<3.12"
+requires-python = ">=3.9,<3.14"
 license = "BSD-3-CLAUSE"
 authors = [
-    {name = "Lucas Arnoldt, Julius Upmeier zu Belzen, Luis Herrmann, Khue Nguyen, Fabian Theis, Bejamin Wild, Roland Eils"},
+    {name = "Lucas Arnoldt, Julius Upmeier zu Belzen, Luis Herrmann, Khue Nguyen, Naveed Ishaque, Fabian Theis, Bejamin Wild, Roland Eils"},
 ]
 maintainers = [
     {name = "Lucas Arnoldt", email = "lucas.arnoldt@helmholtz-munich.de"},
@@ -25,32 +21,34 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Operating System :: MacOS :: MacOS X",
   "Operating System :: Microsoft :: Windows",
   "Operating System :: POSIX :: Linux",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "docrep>=0.3.2",
-    "flax",
-    "lightning>=2.0",
-    "ml-collections>=0.1.1",
-    "mudata>=0.1.2",
-    "numpyro>=0.12.1",
-    "pyro-ppl>=1.6.0",
-    "rich>=12.0.0",
-    "scikit-learn>=0.21.2",
-    "sparse>=0.14.0",
-    "tensorboard>=2.0",
-    "torchmetrics>=0.11.0",
-    "xarray>=2023.2.0",
-    "pqdm",
-    "prettytable",
-    "goatools",
-    "muon",
-    "tabulate",
-    "addict",
-    "torch==2.2.0"
+    "docrep>=0.3.2,<0.4",
+    "flax>=0.8.5,<0.13",
+    "lightning>=2.0,<3.0",
+    "ml-collections>=0.1.1,<1.2.0",
+    "mudata>=0.1.2,<0.4",
+    "numpyro>=0.15.0,<0.20",
+    "pyro-ppl>=1.9.0,<1.10.0",
+    "rich>=12.0.0,<15.0.0",
+    "scikit-learn>=0.21.2,<2.0",
+    "sparse>=0.14.0,<0.18.0",
+    "tensorboard>=2.0,<2.30",
+    "torchmetrics>=0.11.0,<1.9",
+    "xarray>=2023.2.0,<=2025.12.0",
+    "pqdm>=0.2,<0.3",
+    "prettytable>=3.0,<4.0",
+    "goatools>=1.4.12,<1.6",
+    "muon>=0.1.6,<0.2",
+    "tabulate>=0.9.0,<0.10",
+    "addict>=2.4.0,<2.5",
+    "torch==2.8.0"
 ]
 
 [project.optional-dependencies]
@@ -71,27 +69,16 @@ docs = [
 ]
 docsbuild = ["networkvi[docs]"]
 
-# networkvi.hub.HubModel.pull_from_s3
-aws = ["boto3"]
-# networkvi.data.cellxgene
-census = ["cellxgene-census"]
-# networkvi.hub dependencies
-hub = ["huggingface_hub"]
-# networkvi.model.utils.mde dependencies
-pymde = ["pymde"]
-# networkvi.data.add_dna_sequence
-regseq = ["biopython>=1.81", "genomepy"]
-# read loom
-loompy = ["loompy>=3.0.6"]
-# networkvi.criticism and read 10x
-scanpy = ["scanpy>=1.6"]
-
 tutorials = [
     "gdown",
     "jupyter",
 ]
 
 all = ["networkvi[docs,tutorials]"]
+
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
 
 [tool.hatch.build.targets.wheel]
 packages = ['src/networkvi']
@@ -183,3 +170,12 @@ line-ending = "auto"
 
 [tool.jupytext]
 formats = "ipynb,md"
+
+[tool.pixi.project]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tool.pixi.pypi-dependencies]
+networkvi = { path = ".", editable = true }
+
+[tool.pixi.tasks]

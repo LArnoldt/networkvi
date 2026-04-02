@@ -22,30 +22,6 @@ import pickle
 from pytorch_lightning import Trainer
 from tqdm import tqdm
 
-
-
-def create_html(tree_data, results_dir, evaluate_selector, phenotype):
-    filename = "resources/genopheno/ogm_overview.html"
-    f = open(filename, "r", encoding="utf-8")
-    template = f.read()
-    f.close()
-
-    filename = "resources/genopheno/ogm_overview.css"
-    f = open(filename, "r", encoding="utf-8")
-    style = f.read()
-    f.close()
-
-    template = template.replace("{$style$}", style)
-    template = template.replace("{$dag_data$}", tree_data)
-
-    save_path = os.path.join(results_dir, f"{evaluate_selector}_{phenotype}_graph.html")
-    f = open(save_path, "w", encoding="utf-8")
-    f.write(template)
-    f.close()
-
-    return save_path
-
-
 def goobj_to_graphml(
     goobj,
     output_directory,

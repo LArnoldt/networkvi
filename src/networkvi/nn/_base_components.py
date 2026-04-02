@@ -114,10 +114,15 @@ class GeneLayers(nn.Module):
 
         if gene_layer_interaction_source is not None:
             ppi = {
-                "ppi_file": gene_layer_interaction_source,
+                "interaction_file": gene_layer_interaction_source,
                 "model": "LinearInteraction",
                 "residual": True,
-                "nlayers": 1,
+                "nlayers": kwargs["gene_interaction_layer_nlayers"],
+                "pruning_growing": kwargs["gene_interaction_layer_dynamic"],
+                "pruning_frac": kwargs["gene_interaction_layer_pruning_frac"],
+                "dynamic_update_rate": kwargs["gene_interaction_layer_dynamic_update_rate"],
+                "dynamic_end_update_rate": kwargs["gene_interaction_layer_dynamic_end_update_rate"],
+                "pruning_save_path": kwargs["gene_interaction_layer_dynamic_save_path"],
             }
         else:
             ppi = None
@@ -230,6 +235,8 @@ class GOLayers(nn.Module):
         List of .gaf files with mappings of Ensembl IDs to GO.
     standard_go_size
         Standard size of GO nodes in GO Layers.
+    filter_namespace
+        Filter namespaces of ontology( hierarchy (e.g. molecular_function of GO).
     input_dropout
         Dropout rate to apply to each of the hidden layers
     n_layers
@@ -261,6 +268,7 @@ class GOLayers(nn.Module):
         obo_file: str,
         map_ensembl_go: list | np.ndarray,
         standard_go_size: int = 6,
+        filter_namespace: bool = True,
         input_dropout: float = 0.1,
         n_layers: int = 5,
         n_hidden: int = 128,
@@ -312,30 +320,21 @@ class GOLayers(nn.Module):
                       # goa_human_npinter_tar_v2_ensembl_gene_mapping.gaf
                       'gene_transcript': 'gene',
                       'max_level': {'depth': n_layers},
-                      'ontology': 'biological_process',
+                     'ontology': 'biological_process'
+                         if filter_namespace is True
+                         else 'all'
+                         if filter_namespace is False
+                         else ",".join(filter_namespace),
                       'regulates_init': False,
                       'regulates_masking': False,
                       'dynamic_go_size': 'disabled',
                       'dynamic_go': None,
-                      'filter_namespace': True}
+                      'filter_namespace': filter_namespace}
 
         n_latent = n_hidden
 
         if not inject_covariates and not first_layer_inject_covariates:
             attention = None
-            """"{'enabled': False,
-                          'mode': None,
-                          'levels': None,
-                          'inter_dim': None,
-                          'values_from': None,
-                          'dropout': None,
-                          'aggregate': None,
-                          'residual': None,
-                          'layer_norm': None,
-                          'reduce': None,
-                          'head': None,
-                          'multihead': None}
-            """
         else:
             attention = {'enabled': True,
                           'mode': "series",
@@ -1001,7 +1000,7 @@ class GOLayers(nn.Module):
         logger.info(str(len(ds_parents)) + " unique GO terms found in the dataset")
         if len(ds_parents) < 10:
             ds_parents_annotated = {
-                k: self.goobj_unfiltered[k].name for k in ds_parents
+                k: self.goobj[k].name for k in ds_parents
             }
             logger.info(f"Specifically these ones: {ds_parents_annotated}")
 
@@ -1340,13 +1339,12 @@ class Encoder(nn.Module):
         * ``'interaction'`` - Interaction Gene Layer
     gene_layer_interaction_source
         Gene layer interaction source. One of the following
-        * ``'pp'`` - Protein-Protein
-        * ``'tf'`` - Transcription Factor
-        * ``'tad'`` - Topologically Associated Domains
     layers_type
         Type of layer. One of the following
         * ``'linear'`` - Linear Layers
         * ``'go'`` - GO Layers
+    filter_namespace
+        Filter namespaces of ontology( hierarchy (e.g. molecular_function of GO).
     **kwargs
         Keyword args for :class:`~networkvi.nn.FCLayers`
     """
@@ -1371,6 +1369,7 @@ class Encoder(nn.Module):
         standard_go_size: int = 6,
         obo_file: Optional[str] = None,
         map_ensembl_go: Optional[Union[list, np.ndarray]] = None,
+        filter_namespace: bool = True,
         keep_activations: bool = False,
         **kwargs,
     ):
@@ -1416,6 +1415,7 @@ class Encoder(nn.Module):
                 obo_file=obo_file,
                 map_ensembl_go=map_ensembl_go,
                 standard_go_size=standard_go_size,
+                filter_namespace=filter_namespace,
                 n_hidden=n_hidden,
                 n_layers=n_layers,
                 input_dropout=dropout_rate,

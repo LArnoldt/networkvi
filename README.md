@@ -15,7 +15,34 @@
 
 ## Installation
 
-`NetworkVI` requires Python>3.9 on your system.
+`NetworkVI` supports both standard pip installation and Pixi-based reproducible environments.
+We recommend Pixi for most users, as it automatically manages Python, CUDA, and PyTorch versions.
+
+### Recommended: Installation using Pixi (reproducible, CUDA-enabled)
+
+[Pixi](https://pixi.prefix.dev/latest/) is a modern environment manager that combines Conda and pip, making it easy to install GPU-enabled scientific software reproducibly.
+
+1. Install Pixi
+
+Follow the instructions at: [https://pixi.sh](https://pixi.sh)
+
+2. Clone the repository
+
+```
+git clone https://github.com/LArnoldt/networkvi.git
+cd networkvi
+```
+
+3. Create and activate the environment
+
+```
+pixi install
+pixi shell
+```
+
+### Alternative: Installation using pip
+
+If you prefer a standard pip-based installation (CPU or manually managed GPU):
 
 1. Install the latest release of `NetworkVI` from [PyPi](https://pypi.org/project/networkvi/):
 
@@ -23,18 +50,31 @@
 pip install networkvi
 ```
 
-2. Install the latest development version:
+2. (Optional, GPU) Install PyTorch and PyG dependencies manually
 
-```
-pip install git+https://github.com/LArnoldt/networkvi.git@main
-```
-
-Please also install the appropiate CUDA version of `torch`, `torch-scatter` and `torch-sparse` version. Here we give an example for CUDA 12.1:
+For CUDA 12.1:
 
 ```
 pip install -U torch==2.2.0 --index-url https://download.pytorch.org/whl/cu121
 pip install -U torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-2.2.0+cu121.html
 ```
+
+Other CUDA versions are available at:
+
+- [https://pytorch.org](https://pytorch.org)
+- [https://pytorch-geometric.readthedocs.io](https://pytorch-geometric.readthedocs.io)
+
+### Optional dependencies
+
+Additional functionality can be installed via extras:
+
+```
+pip install "networkvi[tutorials]"
+pip install "networkvi[docs]"
+pip install "networkvi[all]"
+```
+
+When using Pixi, extras can be enabled by adjusting `pixi.toml`.
 
 ## API
 

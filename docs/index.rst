@@ -6,7 +6,7 @@ NetworkVI models gene-gene interactions inferred from topological associated dom
 NetworkVI can be used for modality imputation, reference-to-query mapping and aids in identifying modality- and cell type-specific signatures via interpretability.
 NetworkVI will support researchers in interpreting cellular disease mechanisms, guiding biomarker discovery, and ultimately aiding the development of targeted therapies in large-scale single-cell multimodal atlases.
 
-Check out the :doc:`api` and :doc:`tutorials` section for further information.
+Check out the :doc:`api`, :doc:`tutorials`, and :doc:`resources` section for further information.
 
 If you use NetworkVI, please consider citing:
 
@@ -30,6 +30,7 @@ Contents
 
    api
    tutorials
+   resources
    changelog
    references
 

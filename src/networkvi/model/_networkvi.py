@@ -16,7 +16,6 @@ import torch.nn as nn
 from anndata import AnnData
 from scipy.sparse import csr_matrix, vstack
 from torch.distributions import Normal
-from tqdm import tqdm
 import pickle
 from collections import defaultdict
 
@@ -50,7 +49,7 @@ from networkvi.utils._docstrings import de_dsp, devices_dsp, setup_anndata_dsp
 from networkvi.dataloaders._data_splitting import validate_data_split
 
 from networkvi.nn._introspections import calculate_interpretations, goobj_to_csv
-from networkvi.nn._evaluate_funcs import goobj_to_graphml, make_json_str, create_html
+from networkvi.nn._evaluate_funcs import goobj_to_graphml, make_json_str
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +127,8 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
         * ``'pp'`` - Protein-Protein
         * ``'tf'`` - Transcription Factor
         * ``'tad'`` - Topologically Associated Domains
+    gene_interaction_layer_nlayers
+        Number of layers of gene interaction layer.
     standard_gene_size
         Standard size of gene nodes in Gene Layers.
     standard_go_size
@@ -136,6 +137,8 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
         Path .obo file of GO.
     map_ensembl_go
         List of .gaf files with mappings of Ensembl IDs to GO.
+    filter_namespace
+        Filter namespaces of ontology( hierarchy (e.g. molecular_function of GO).
     keep_activations
         Bool, whether keep activations in fully-connected encoder layers.
     use_mean_mixing
@@ -235,10 +238,12 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
         accessibility_gene_layer_type: Literal["none", "standard", "interaction"] = "interaction",
         protein_gene_layer_type: Literal["none", "standard", "interaction"] = "interaction",
         gene_layer_interaction_source: Optional[str] = None,
+        gene_interaction_layer_nlayers: Optional[int] = 1,
         standard_gene_size: int = 4,
         standard_go_size: int = 6,
         obo_file: Optional[str] = None,
         map_ensembl_go: Optional[Union[list, np.ndarray]] = None,
+        filter_namespace: bool = True,
         dropout_rate: float = 0.1,
         region_factors: bool = True,
         gene_likelihood: Literal["zinb", "nb", "poisson"] = "zinb",
@@ -307,10 +312,12 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
             accessibility_gene_layer_type=accessibility_gene_layer_type,
             protein_gene_layer_type=protein_gene_layer_type,
             gene_layer_interaction_source=gene_layer_interaction_source,
+            gene_interaction_layer_nlayers=gene_interaction_layer_nlayers,
             standard_gene_size=standard_gene_size,
             standard_go_size=standard_go_size,
             obo_file=obo_file,
             map_ensembl_go=map_ensembl_go,
+            filter_namespace=filter_namespace,
             n_continuous_cov=self.summary_stats.get("n_extra_continuous_covs", 0),
             n_cats_per_cov=n_cats_per_cov,
             dropout_rate=dropout_rate,
@@ -650,10 +657,26 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
                 for modality in peturbation_graph_csv_result.keys():
                     peturbation_graph_csv_result_agg[peturbation_gene_stable_id][perturbation_des][modality] = {}
                     for phenotype in peturbation_graph_csv_result[modality].keys():
-                        peturbation_graph_csv_result_agg[peturbation_gene_stable_id][perturbation_des][modality][phenotype] = np.array(peturbation_graph_csv_result[modality][phenotype]['predictors_label_valid_roc'])
+                        peturbation_graph_csv_result_agg[peturbation_gene_stable_id][perturbation_des][modality][phenotype] = {
+                            "roc": np.asarray(peturbation_graph_csv_result[modality][phenotype]["predictors_label_valid_roc"]),
+                            "roc_ci_median": np.asarray(peturbation_graph_csv_result[modality][phenotype]["predictors_label_valid_roc_ci_median"]),
+                            "roc_ci_lower": np.asarray(peturbation_graph_csv_result[modality][phenotype]["predictors_label_valid_roc_ci_lower"]),
+                            "roc_ci_upper": np.asarray(peturbation_graph_csv_result[modality][phenotype]["predictors_label_valid_roc_ci_upper"]),
+                        }
 
             if save_results:
-                with open(os.path.join(results_dir, f'{labels_column}{comparison_str}_res_unp_act_mask_{restrict_unpaired_activations_mask}_flip_{restrict_unpaired_activations_mask_flip}{restrict_by_column_key_values_str}{"_go_terms" if calc_go_terms else ""}_perturbation_{peturbation_gene_stable_id}_evaluated_graph_csv.pkl'), 'wb') as f:
+                ci_tag  = "_with_ci" if calculate_ci else ""
+                fname = (
+                    f"{labels_column}{comparison_str}{control_str}"
+                    f"_res_unp_act_mask_{restrict_unpaired_activations_mask}"
+                    f"_flip_{restrict_unpaired_activations_mask_flip}"
+                    f"{restrict_by_column_key_values_str}"
+                    f"{'_go_terms' if calc_go_terms else ''}"
+                    f"_perturbation_{peturbation_gene_stable_id}"
+                    f"_{spikein_tag}"
+                    f"_evaluated_graph_csv{ci_tag}.pkl"
+                )
+                with open(os.path.join(results_dir, fname), "wb") as f:
                     pickle.dump(peturbation_graph_csv_result_agg[peturbation_gene_stable_id], f)
 
         return peturbation_graph_csv_result_agg
@@ -973,19 +996,6 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
                             )
                         )
 
-                        """
-                        # Save graph results
-                        pickle.dump(
-                            goobj_phenotype,
-                            open(
-                                os.path.join(
-                                    results_dir,
-                                    f'{z_encoder_name}_{labels_column}{comparison_str}_{phenotype_str}_res_unp_act_mask_{restrict_unpaired_activations_mask}_flip_{restrict_unpaired_activations_mask_flip}{restrict_by_column_key_values_str}{"_go_terms" if calc_go_terms else ""}{"_genes" if calc_genes else ""}{"_gene_groups" if calc_gene_groups else ""}_evaluated_graph.pkl',
-                                ),
-                                "wb",
-                            ),
-                        )
-                        """
 
                         if calc_go_terms:
                             # Save graph results as graphml object
@@ -999,19 +1009,6 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
                                 interpret_covariates=False,
                                 label_only=True,
                             )
-                            try:
-                                json_str = make_json_str(goobj_phenotype, z_encoder.encoder.gomodel.order)
-                                html_path = create_html(
-                                    json_str, results_dir,
-                                    f"{z_encoder_name}_{labels_column}{comparison_str}_{phenotype_str}_res_unp_act_mask_{restrict_unpaired_activations_mask}_flip_{restrict_unpaired_activations_mask_flip}{restrict_by_column_key_values_str}",
-                                    ""
-                                )
-                                logger.info(f"Created html at {html_path}")
-                            except Exception as e:
-                                logger.warning(
-                                    f"Encountered a problem for interpretability for {e}"
-                                )
-                                continue
 
                     del goobj_phenotype
                     graph_csv_result[z_encoder_name][phenotype_str] = graph_csv_phenotype
@@ -1040,7 +1037,7 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
         save_results: bool = True,
         results_dir: str = "",
     ) -> dict[str, dict[str, pd.DataFrame]]:
-        """Return attention rollout.
+        """Return covariate attention.
 
         Parameters
         ----------
@@ -1050,12 +1047,24 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
         indices
             Indices of cells in adata to use. If `None`, all cells are used.
         batch_size
-            Minibatch size for data loading into model. Defaults to `networkvi.settings.batch_size`.
+            Minibatch size for data loading into model. Defaults to `scvi.settings.batch_size`.
 
         Returns
         -------
-        Gene and GO importances for expression and accessibility
+        GO and gene attention per modality.
         """
+
+        def mean_ci(x, alpha=0.05, axis=0):
+            """
+            uncertainty across (cells × outputs).
+            """
+            x = np.asarray(x)
+            n = x.shape[axis]
+            mean = np.mean(x, axis=axis)
+            std = np.std(x, axis=axis, ddof=1)
+            se = std / np.sqrt(n)
+            z = norm.ppf(1 - alpha / 2)
+            return mean, mean - z * se, mean + z * se
 
         os.makedirs(results_dir, exist_ok=True)
 
@@ -1081,22 +1090,19 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
         if self.train_idx is None:
             self.val_idx = indices[:self.n_val]
             self.train_idx = indices[self.n_val: (self.n_val + self.n_train)]
-            #self.test_idx = indices[(self.n_val + self.n_train):]
         else:
             indices = np.setdiff1d(indices, self.train_idx)
             if self.val_idx is None:
                 self.val_idx = indices[:n_val]
             indices = np.concatenate([self.train_idx, self.val_idx])
-            #if not self.test_idx:
-            #    self.test_idx = indices[len(self.val_idx) + len(self.train_idx):]
 
         scdl = self._make_data_loader(adata=adata, indices=indices, batch_size=batch_size)
         labels = labels[indices]
 
-        modalities_names = ["expression", "accessibility", "protein"]
+        modalities_names = ["expression", "accessibility", "protein", "genotype"]
         modalities_encoders = [self.module.z_encoder_expression, self.module.z_encoder_accessibility,
-                               self.module.z_encoder_protein]
-        # restrict_modalities
+                               self.module.z_encoder_protein, self.module.z_encoder_genotype]
+
         if restrict_modalities is not False:
             if type(restrict_modalities) == str:
                 restrict_modalities = [restrict_modalities]
@@ -1119,6 +1125,7 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
         ###
 
         for tensors in scdl:
+
             inputs = self.module._get_inference_input(tensors)
             x = inputs["x"]
             y = inputs["y"]
@@ -1130,11 +1137,18 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
                 x_chr = torch.zeros(x.shape[0], 1, device=x.device, requires_grad=False)
             else:
                 x_chr = x[:, self.module.n_input_genes: (self.module.n_input_genes + self.module.n_input_regions)]
+            if self.module.n_input_snps == 0:
+                x_geno = torch.zeros(x.shape[0], 1, device=x.device, requires_grad=False)
+            else:
+                x_geno = x[:, (self.module.n_input_genes + self.module.n_input_regions): (
+                        self.n_input_genes + self.n_input_regions + self.n_input_snps)]
 
             if z_encoder_name == "expression":
                 mask = x_rna.sum(dim=1) > 0
             elif z_encoder_name == "accessibility":
                 mask = x_chr.sum(dim=1) > 0
+            elif z_encoder_name == "genotype":
+                mask = torch.zeros(x_geno.shape[0], dtype=torch.bool)
             elif z_encoder_name == "protein":
                 mask = y.sum(dim=1) > 0
 
@@ -1189,14 +1203,14 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
 
             covariate_attention_registry_mean = defaultdict(dict)
             covariate_attention_registry_group_mean = defaultdict(dict)
-            covariate_attention_registry_std = defaultdict(dict)
-            covariate_attention_registry_group_std = defaultdict(dict)
+            covariate_attention_registry_ci = defaultdict(dict)
+            covariate_attention_registry_group_ci = defaultdict(dict)
             for z_encoder_name, z_encoder in zip(modalities_names, modalities_encoders):
                 if hasattr(z_encoder.encoder, "gomodel"):
                     index_gene = 0
                     for go_term_ensg in list(z_encoder.encoder.goobj.keys()) + list(z_encoder.genemodel.geneobj.keys()):
                         if go_term_ensg.startswith("ENSG"):
-                            out_slice = slice(0 + self.module.standard_gene_size * index_gene, self.module.standard_gene_size + self.module.standard_gene_size * index_gene)
+                            out_slice = slice(0 + 4 * index_gene, 4 + 4 * index_gene)
                             depth = -1
                         elif go_term_ensg.startswith("GO:") and z_encoder.encoder.goobj[go_term_ensg].depth != self.module.n_layers_encoder:
                             out_slice = z_encoder.encoder.goobj[go_term_ensg].out_slice
@@ -1207,37 +1221,47 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
                             index_gene += 1
 
                         if out_slice is not None:
-                            covariate_attention_registry_mean[z_encoder_name][go_term_ensg] = np.mean(np.mean(
-                                covariate_attention_registry_concat[z_encoder_name][depth][mask, out_slice], axis=0),
-                                axis=0)
-                            covariate_attention_registry_std[z_encoder_name][go_term_ensg] = np.mean(np.std(
-                                covariate_attention_registry_concat[z_encoder_name][depth][mask, out_slice], axis=0),
-                                axis=0)
+                            A = covariate_attention_registry_concat[z_encoder_name][depth][mask, out_slice]
+
+                            A_flat = A.reshape(-1, A.shape[-1])
+
+                            mean, ci_lo, ci_hi = mean_ci(A_flat, alpha=0.05, axis=0)
+
+                            covariate_attention_registry_mean[z_encoder_name][go_term_ensg] = mean
+                            covariate_attention_registry_ci[z_encoder_name][go_term_ensg] = np.stack(
+                                [ci_lo, ci_hi], axis=0
+                            )
+                            ###
 
                             covariate_attention_registry_group_mean_sub = []
-                            covariate_attention_registry_group_std_sub = []
+                            covariate_attention_registry_group_ci_sub = []
                             for i in range(len(covariate_lengths[:-1])):
                                 start_idx = covariate_lengths[i]
                                 end_idx = covariate_lengths[i + 1]
-                                group_mean = np.mean(
-                                    covariate_attention_registry_mean[z_encoder_name][go_term_ensg][start_idx:end_idx])
-                                group_std = np.std(
-                                    covariate_attention_registry_mean[z_encoder_name][go_term_ensg][start_idx:end_idx])
+                                mean_vec = covariate_attention_registry_mean[z_encoder_name][go_term_ensg]
+                                ci = covariate_attention_registry_ci[z_encoder_name][go_term_ensg]
+
+                                group_mean = mean_vec[start_idx:end_idx].mean()
+                                group_ci = [
+                                    ci[0, start_idx:end_idx].mean(),
+                                    ci[1, start_idx:end_idx].mean(),
+                                ]
+
                                 covariate_attention_registry_group_mean_sub.append(group_mean)
-                                covariate_attention_registry_group_std_sub.append(group_std)
+                                covariate_attention_registry_group_ci_sub.append(group_ci)
                             covariate_attention_registry_group_mean[z_encoder_name][go_term_ensg] = np.array(
                                 covariate_attention_registry_group_mean_sub)
-                            covariate_attention_registry_group_std[z_encoder_name][go_term_ensg] = np.array(
-                                covariate_attention_registry_group_std_sub)
+                            covariate_attention_registry_group_ci[z_encoder_name][go_term_ensg] = np.array(
+                                covariate_attention_registry_group_ci_sub)
 
-            return covariate_attention_registry_mean, covariate_attention_registry_group_mean, covariate_attention_registry_std, covariate_attention_registry_group_std
+            return covariate_attention_registry_mean, covariate_attention_registry_group_mean, covariate_attention_registry_ci, covariate_attention_registry_group_ci
 
-        covariate_attention_registry_mean, covariate_attention_registry_group_mean, covariate_attention_registry_std, covariate_attention_registry_group_std = calculate_attention_statistics(modalities_names, modalities_encoders, mask)
+        covariate_attention_registry_mean, covariate_attention_registry_group_mean, covariate_attention_registry_ci, covariate_attention_registry_group_ci = calculate_attention_statistics(modalities_names, modalities_encoders, mask)
 
         covariate_attention_registry_mean_phenotypes = {}
         covariate_attention_registry_group_mean_phenotypes = {}
-        covariate_attention_registry_std_phenotypes = {}
-        covariate_attention_registry_group_std_phenotypes = {}
+        covariate_attention_registry_ci_phenotypes = {}
+        covariate_attention_registry_group_ci_phenotypes = {}
 
         for phenotype in labels_testing:
 
@@ -1258,22 +1282,22 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
                 phenotype_str = f"{'_'.join(phenotype)}"
 
             covariate_attention_registry_mean_phenotypes[phenotype_str], covariate_attention_registry_group_mean_phenotypes[
-                phenotype_str], covariate_attention_registry_std_phenotypes[phenotype_str], \
-            covariate_attention_registry_group_std_phenotypes[phenotype_str] = calculate_attention_statistics(
+                phenotype_str], covariate_attention_registry_ci_phenotypes[phenotype_str], \
+            covariate_attention_registry_group_ci_phenotypes[phenotype_str] = calculate_attention_statistics(
                 modalities_names, modalities_encoders, mask_phenotype)
 
         if save_results:
-            np.save(os.path.join(results_dir, f'modality_categorical_covariate_keys.npy'), np.array(modality_categorical_covariate_keys))
-            np.save(os.path.join(results_dir, f'continuous_covariate_keys.npy'), np.array(continuous_covariate_keys))
-            np.save(os.path.join(results_dir, f'covariate_lengths.npy'), np.array(covariate_lengths))
+            np.save(os.path.join(results_dir, f'modality_categorical_covariate_keys_with_ci.npy'), np.array(modality_categorical_covariate_keys))
+            np.save(os.path.join(results_dir, f'continuous_covariate_keys_with_ci.npy'), np.array(continuous_covariate_keys))
+            np.save(os.path.join(results_dir, f'covariate_lengths_with_ci.npy'), np.array(covariate_lengths))
             for covariate_attention_registry_statistic, covariate_attention_registry_statistic_name in zip(
-                [covariate_attention_registry_mean, covariate_attention_registry_group_mean, covariate_attention_registry_std, covariate_attention_registry_group_std, covariate_attention_registry_mean_phenotypes, covariate_attention_registry_group_mean_phenotypes, covariate_attention_registry_std_phenotypes, covariate_attention_registry_group_std_phenotypes],
-                ["covariate_attention_registry_mean", "covariate_attention_registry_group_mean", "covariate_attention_registry_std", "covariate_attention_registry_group_std", "covariate_attention_registry_mean_phenotypes", "covariate_attention_registry_group_mean_phenotypes", "covariate_attention_registry_std_phenotypes", "covariate_attention_registry_group_std_phenotypes"],
+                [covariate_attention_registry_mean, covariate_attention_registry_group_mean, covariate_attention_registry_ci, covariate_attention_registry_group_ci, covariate_attention_registry_mean_phenotypes, covariate_attention_registry_group_mean_phenotypes, covariate_attention_registry_ci_phenotypes, covariate_attention_registry_group_ci_phenotypes],
+                ["covariate_attention_registry_mean", "covariate_attention_registry_group_mean", "covariate_attention_registry_ci", "covariate_attention_registry_group_ci", "covariate_attention_registry_mean_phenotypes", "covariate_attention_registry_group_mean_phenotypes", "covariate_attention_registry_ci_phenotypes", "covariate_attention_registry_group_ci_phenotypes"],
             ):
-                with open(os.path.join(results_dir, f'{covariate_attention_registry_statistic_name}.pkl'), 'wb') as f:
+                with open(os.path.join(results_dir, f'{covariate_attention_registry_statistic_name}_with_ci.pkl'), 'wb') as f:
                     pickle.dump(covariate_attention_registry_statistic, f)
 
-        return covariate_attention_registry_mean, covariate_attention_registry_group_mean, covariate_attention_registry_std, covariate_attention_registry_group_std, covariate_attention_registry_mean_phenotypes, covariate_attention_registry_group_mean_phenotypes, covariate_attention_registry_std_phenotypes, covariate_attention_registry_group_std_phenotypes
+        return covariate_attention_registry_mean, covariate_attention_registry_group_mean, covariate_attention_registry_ci, covariate_attention_registry_group_ci
 
     @torch.inference_mode()
     def get_library_size_factors(

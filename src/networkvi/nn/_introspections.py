@@ -8,11 +8,8 @@ from sklearn.linear_model import (
     Ridge,
 )
 
-# from sklearn.neural_network import MLPClassifier
-# from sklearn.model_selection import GridSearchCV
-# from catboost import CatBoostClassifier
-
 from sklearn.metrics import roc_auc_score
+from sklearn.metrics import r2_score
 from tqdm import tqdm
 from pqdm.threads import pqdm
 
@@ -42,24 +39,11 @@ def goobj_to_csv(goobj, interpret_covariates=None, label_only=True):
         "block_index",
         "case_activations",
         "case_means",
-        #"children",
         "ctrl_activations",
         "ctrl_means",
         "depth",
         "ensemblids",
         "genes_disrupted",
-        #"get_all_child_edges",
-        #"get_all_children",
-        #"get_all_lower",
-        #"get_all_parent_edges",
-        #"get_all_parents",
-        #"get_all_upper",
-        #"get_goterms_lower",
-        # 'get_goterms_lower_rels',
-        #"get_goterms_upper",
-        # 'get_goterms_upper_rels',
-        # 'has_child',
-        # 'has_parent',
         "id",
         "is_obsolete",
         "item_id",
@@ -69,21 +53,25 @@ def goobj_to_csv(goobj, interpret_covariates=None, label_only=True):
         "namespace",
         "ogm_depth",
         "out_slice",
-        #"parents",
-        # 'predictors_label_clf',
         "predictors_label_preds_test",
         "predictors_label_preds_valid",
         "predictors_label_test_roc",
+        "predictors_label_test_roc_ci_median",
+        "predictors_label_test_roc_ci_lower",
+        "predictors_label_test_roc_ci_upper",
+        "predictors_label_test_r2_score",
         "predictors_label_test_spearman_correlation",
         "predictors_label_test_spearman_p",
         "predictors_label_valid_roc",
+        "predictors_label_valid_roc_ci_median",
+        "predictors_label_valid_roc_ci_lower",
+        "predictors_label_valid_roc_ci_upper",
+        "predictors_label_valid_r2_score",
         "predictors_label_valid_spearman_correlation",
         "predictors_label_valid_spearman_p",
         "predictors_label_valid_rlipp",
         "predictors_label_valid_roc_improvement",
         "predictors_label_valid_spearman_improvement",
-        #"relationship",
-        #"relationship_rev",
         "width",
     ]
 
@@ -122,48 +110,15 @@ def goobj_to_csv(goobj, interpret_covariates=None, label_only=True):
                 goobj_csv.loc[go_term, "block_index"] = np.nan
             goobj_csv.loc[go_term, "case_activations"] = goobj[go_term].case_activations
             goobj_csv.loc[go_term, "case_means"] = goobj[go_term].case_means
-            #goobj_csv.loc[go_term, "children"] = goobj[go_term].children
             goobj_csv.loc[go_term, "ctrl_activations"] = goobj[go_term].ctrl_activations
             goobj_csv.loc[go_term, "ctrl_means"] = goobj[go_term].ctrl_means
             goobj_csv.loc[go_term, "depth"] = goobj[go_term].depth
             if go_term.startswith("GO:"):
                 goobj_csv.loc[go_term, "ensemblids"] = goobj[go_term].ensemblids
                 goobj_csv.loc[go_term, "genes_disrupted"] = goobj[go_term].genes_disrupted
-                #goobj_csv.loc[go_term, "get_all_child_edges"] = goobj[
-                #    go_term
-                #].get_all_child_edges
-                #goobj_csv.loc[go_term, "get_all_children"] = goobj[go_term].get_all_children
-                #goobj_csv.loc[go_term, "get_all_lower"] = goobj[go_term].get_all_lower
-                #goobj_csv.loc[go_term, "get_all_parent_edges"] = goobj[
-                #    go_term
-                #].get_all_parent_edges
-                #goobj_csv.loc[go_term, "get_all_parents"] = goobj[go_term].get_all_parents
-                #goobj_csv.loc[go_term, "get_all_upper"] = goobj[go_term].get_all_upper
-                #goobj_csv.loc[go_term, "get_goterms_lower"] = goobj[
-                #    go_term
-                #].get_goterms_lower
-                # goobj_csv.loc[go_term, 'get_goterms_lower_rels'] = goobj[go_term].get_goterms_lower_rels
-                #goobj_csv.loc[go_term, "get_goterms_upper"] = goobj[
-                #    go_term
-                #].get_goterms_upper
-                # goobj_csv.loc[go_term, 'get_goterms_upper_rels'] = goobj[go_term].get_goterms_upper_rels
-                # goobj_csv.loc[go_term, 'has_child'] = goobj[go_term].has_child
-                # goobj_csv.loc[go_term, 'has_parent'] = goobj[go_term].has_parent
             elif go_term.startswith("ENSG"):
                 goobj_csv.loc[go_term, "ensemblids"] = np.nan
                 goobj_csv.loc[go_term, "genes_disrupted"] = np.nan
-                #goobj_csv.loc[go_term, "get_all_child_edges"] = np.nan
-                #goobj_csv.loc[go_term, "get_all_children"] = np.nan
-                #goobj_csv.loc[go_term, "get_all_lower"] = np.nan
-                #goobj_csv.loc[go_term, "get_all_parent_edges"] = np.nan
-                #goobj_csv.loc[go_term, "get_all_parents"] = np.nan
-                #goobj_csv.loc[go_term, "get_all_upper"] = np.nan
-                #goobj_csv.loc[go_term, "get_goterms_lower"] = np.nan
-                # goobj_csv.loc[go_term, 'get_goterms_lower_rels'] = np.nan
-                #goobj_csv.loc[go_term, "get_goterms_upper"] = np.nan
-                # goobj_csv.loc[go_term, 'get_goterms_upper_rels'] = np.nan
-                # goobj_csv.loc[go_term, 'has_child'] = np.nan
-                # goobj_csv.loc[go_term, 'has_parent'] = np.nan
             goobj_csv.loc[go_term, "id"] = goobj[go_term].id
             if go_term.startswith("GO:"):
                 goobj_csv.loc[go_term, "is_obsolete"] = goobj[go_term].is_obsolete
@@ -173,8 +128,6 @@ def goobj_to_csv(goobj, interpret_covariates=None, label_only=True):
                 goobj_csv.loc[go_term, "name"] = goobj[go_term].name
                 goobj_csv.loc[go_term, "namespace"] = goobj[go_term].namespace
                 goobj_csv.loc[go_term, "ogm_depth"] = goobj[go_term].ogm_depth
-                # goobj_csv.loc[go_term, 'out_slice'] = goobj[go_term].out_slice
-                #goobj_csv.loc[go_term, "parents"] = goobj[go_term].parents
             elif go_term.startswith("ENSG"):
                 goobj_csv.loc[go_term, "is_obsolete"] = np.nan
                 goobj_csv.loc[go_term, "item_id"] = np.nan
@@ -183,9 +136,6 @@ def goobj_to_csv(goobj, interpret_covariates=None, label_only=True):
                 goobj_csv.loc[go_term, "name"] = np.nan
                 goobj_csv.loc[go_term, "namespace"] = np.nan
                 goobj_csv.loc[go_term, "ogm_depth"] = np.nan
-                # goobj_csv.loc[go_term, 'out_slice'] = np.nan
-                #goobj_csv.loc[go_term, "parents"] = np.nan
-            # goobj_csv.loc[go_term, 'predictors_label_clf'] = goobj[go_term].predictors['label'].clf
             if len(vars(goobj[go_term].predictors["label"]).keys()) > 0:
                 goobj_csv.loc[go_term, "predictors_label_preds_test"] = (
                     goobj[go_term].predictors["label"].preds_test
@@ -193,18 +143,46 @@ def goobj_to_csv(goobj, interpret_covariates=None, label_only=True):
                 goobj_csv.loc[go_term, "predictors_label_preds_valid"] = (
                     goobj[go_term].predictors["label"].preds_valid
                 )
-                goobj_csv.loc[go_term, "predictors_label_test_roc"] = (
-                    goobj[go_term].predictors["label"].roc
-                )
+                try:
+                    goobj_csv.loc[go_term, "predictors_label_test_roc"] = (
+                        goobj[go_term].predictors["label"].roc
+                    )
+                    goobj_csv.loc[go_term, "predictors_label_test_roc_ci_median"] = (
+                        goobj[go_term].predictors["label"].roc_ci_median
+                    )
+                    goobj_csv.loc[go_term, "predictors_label_test_roc_ci_lower"] = (
+                        goobj[go_term].predictors["label"].roc_ci_lower
+                    )
+                    goobj_csv.loc[go_term, "predictors_label_test_roc_ci_upper"] = (
+                        goobj[go_term].predictors["label"].roc_ci_upper
+                    )
+                except AttributeError:
+                    goobj_csv.loc[go_term, "predictors_label_test_r2_score"] = (
+                                            goobj[go_term].predictors["label"].r2_score
+                                        )
                 goobj_csv.loc[go_term, "predictors_label_test_spearman_correlation"] = (
                     goobj[go_term].predictors["label"].spearman_correlation
                 )
                 goobj_csv.loc[go_term, "predictors_label_test_spearman_p"] = (
                     goobj[go_term].predictors["label"].spearman_p
                 )
-                goobj_csv.loc[go_term, "predictors_label_valid_roc"] = (
-                    goobj[go_term].predictors["label"].valid_roc
-                )
+                try:
+                    goobj_csv.loc[go_term, "predictors_label_valid_roc"] = (
+                        goobj[go_term].predictors["label"].valid_roc
+                    )
+                    goobj_csv.loc[go_term, "predictors_label_valid_roc_ci_median"] = (
+                        goobj[go_term].predictors["label"].valid_roc_ci_median
+                    )
+                    goobj_csv.loc[go_term, "predictors_label_valid_roc_ci_lower"] = (
+                        goobj[go_term].predictors["label"].valid_roc_ci_lower
+                    )
+                    goobj_csv.loc[go_term, "predictors_label_valid_roc_ci_upper"] = (
+                        goobj[go_term].predictors["label"].valid_roc_ci_upper
+                    )
+                except AttributeError:
+                    goobj_csv.loc[go_term, "predictors_label_valid_roc"] = (
+                                            goobj[go_term].predictors["label"].valid_r2_score
+                                        )
                 goobj_csv.loc[go_term, "predictors_label_valid_spearman_correlation"] = (
                     goobj[go_term].predictors["label"].valid_spearman_correlation
                 )
@@ -224,11 +202,17 @@ def goobj_to_csv(goobj, interpret_covariates=None, label_only=True):
                 goobj_csv.loc[go_term, "predictors_label_preds_test"] = np.nan
                 goobj_csv.loc[go_term, "predictors_label_preds_valid"] = np.nan
                 goobj_csv.loc[go_term, "predictors_label_test_roc"] = np.nan
+                goobj_csv.loc[go_term, "predictors_label_test_roc_ci_median"] = np.nan
+                goobj_csv.loc[go_term, "predictors_label_test_roc_ci_lower"] = np.nan
+                goobj_csv.loc[go_term, "predictors_label_test_roc_ci_upper"] = np.nan
                 goobj_csv.loc[
                     go_term, "predictors_label_test_spearman_correlation"
                 ] = np.nan
                 goobj_csv.loc[go_term, "predictors_label_test_spearman_p"] = np.nan
                 goobj_csv.loc[go_term, "predictors_label_valid_roc"] = np.nan
+                goobj_csv.loc[go_term, "predictors_label_valid_roc_ci_median"] = np.nan
+                goobj_csv.loc[go_term, "predictors_label_valid_roc_ci_lower"] = np.nan
+                goobj_csv.loc[go_term, "predictors_label_valid_roc_ci_upper"] = np.nan
                 goobj_csv.loc[
                     go_term, "predictors_label_valid_spearman_correlation"
                 ] = np.nan
@@ -255,12 +239,8 @@ def goobj_to_csv(goobj, interpret_covariates=None, label_only=True):
                     )
             if go_term.startswith("GO:"):
                 goobj_csv.loc[go_term, "width"] = goobj[go_term].width
-                #goobj_csv.loc[go_term, "relationship"] = goobj[go_term].relationship
-                #goobj_csv.loc[go_term, "relationship_rev"] = goobj[go_term].relationship_rev
             elif go_term.startswith("ENSG"):
                 goobj_csv.loc[go_term, "width"] = np.nan
-                #goobj_csv.loc[go_term, "relationship"] = np.nan
-                #goobj_csv.loc[go_term, "relationship_rev"] = np.nan
         except AttributeError:
             continue
 
@@ -381,23 +361,124 @@ def calculate_node(
 
             term_obj.predictors[covariate].preds_test = clf.predict(test_act)
 
-
         term_obj.predictors[covariate].clf = clf
 
-        def evaluate_predictions(preds, case_idces, attr_prefix=""):
+        def bootstrap_auc_ci(
+            y_true,
+            y_score,
+            n_boot=200,
+            alpha=0.05,
+            subsample_frac=1.0,
+            random_state=None,
+        ):
+            """
+            Bootstrap CI for AUROC.
+            Returns (median, lower, upper).
+            """
+            rng = np.random.default_rng(random_state)
+
+            y_true = np.asarray(y_true)
+            y_score = np.asarray(y_score)
+
+            n = len(y_true)
+            if n < 2 or len(np.unique(y_true)) < 2:
+                return np.nan, np.nan, np.nan
+
+            boot_aucs = []
+
+            for _ in range(n_boot):
+                if subsample_frac < 1.0:
+                    m = int(np.ceil(n * subsample_frac))
+                else:
+                    m = n
+
+                idx = rng.choice(n, size=m, replace=True)
+
+                if len(np.unique(y_true[idx])) < 2:
+                    continue
+
+                try:
+                    boot_aucs.append(
+                        roc_auc_score(y_true[idx], y_score[idx])
+                    )
+                except ValueError:
+                    continue
+
+            if len(boot_aucs) == 0:
+                return np.nan, np.nan, np.nan
+
+            lower = np.percentile(boot_aucs, 100 * alpha / 2)
+            upper = np.percentile(boot_aucs, 100 * (1 - alpha / 2))
+            median = np.median(boot_aucs)
+
+            return median, lower, upper
+
+        def evaluate_predictions(preds, case_idces, attr_prefix="", filt_case=False):
             not_nan = ~np.isnan(case_idces[covariate])
+            case_idces_not_nan = case_idces[covariate][not_nan]
 
             if binary:
                 if preds is not None:
+                    y_true = case_idces_not_nan
+                    y_score = preds[not_nan]
+
+                    roc = roc_auc_score(y_true=y_true, y_score=y_score)
+                    setattr(term_obj.predictors[covariate], attr_prefix + "roc", roc)
+
+                    roc_med, roc_lo, roc_hi = bootstrap_auc_ci(
+                        y_true,
+                        y_score,
+                        n_boot=200,
+                        subsample_frac=1.0,
+                    )
+                    setattr(term_obj.predictors[covariate], attr_prefix + "roc_ci_median", roc_med)
+                    setattr(term_obj.predictors[covariate], attr_prefix + "roc_ci_lower", roc_lo)
+                    setattr(term_obj.predictors[covariate], attr_prefix + "roc_ci_upper", roc_hi)
+
                     roc = roc_auc_score(
-                        y_true=case_idces[covariate][not_nan], y_score=preds[not_nan]
+                        y_true=y_true, y_score=y_score
                     )
                     setattr(term_obj.predictors[covariate], attr_prefix + "roc", roc)
                 else:
+                    setattr(term_obj.predictors[covariate], attr_prefix + "roc_ci_median", None)
+                    setattr(term_obj.predictors[covariate], attr_prefix + "roc_ci_lower", None)
+                    setattr(term_obj.predictors[covariate], attr_prefix + "roc_ci_upper", None)
+                    ###
                     setattr(term_obj.predictors[covariate], attr_prefix + "roc", None)
+            else:
+                if set(case_idces[covariate]) == set([0, 1, 2]):
+                    if preds is not None:
+                        if filt_case:
+                            mask = case_idces_not_nan > 0
+                            case_idces_not_nan = case_idces_not_nan[mask].replace({1: 0, 2: 1})
+                        else:
+                            case_idces_not_nan = case_idces_not_nan.replace({1: 0, 2: 1})
+                        if filt_case:
+                            roc = roc_auc_score(
+                                y_true=case_idces_not_nan, y_score=preds
+                            )
+                        else:
+                            roc = roc_auc_score(
+                                y_true=case_idces_not_nan, y_score=preds[not_nan]
+                            )
+                        setattr(term_obj.predictors[covariate], attr_prefix + "roc", roc)
+                    else:
+                        setattr(term_obj.predictors[covariate], attr_prefix + "roc", None)
+                else:
+                    if preds is not None:
+                        r2_score = r2_score(
+                            y_true=case_idces_not_nan, y_score=preds[not_nan]
+                        )
+                        setattr(term_obj.predictors[covariate], attr_prefix + "r2_score", r2_score)
+                    else:
+                        setattr(term_obj.predictors[covariate], attr_prefix + "r2_score", None)
+
 
             if preds is not None:
-                corr = stats.spearmanr(case_idces[covariate][not_nan], preds[not_nan])
+                if filt_case:
+                    corr = stats.spearmanr(case_idces_not_nan, preds)
+                else:
+                    corr = stats.spearmanr(case_idces_not_nan, preds[not_nan])
                 setattr(
                     term_obj.predictors[covariate],
                     attr_prefix + "spearman_correlation",
@@ -412,6 +493,7 @@ def calculate_node(
                 )
                 setattr(term_obj.predictors[covariate], attr_prefix + "spearman_p", None)
 
+
         evaluate_predictions(
             term_obj.predictors[covariate].preds_test, case_idces_test, "" + prefix
         )
@@ -419,6 +501,7 @@ def calculate_node(
             term_obj.predictors[covariate].preds_valid,
             case_idces_valid,
             "valid_" + prefix,
+            filt_case=True
         )
 
         return (
@@ -605,8 +688,12 @@ def set_acts(
         # term_obj.mean_activations_test = term_obj.activations_test.mean(axis=0)
         term_obj.width = term_obj.activations_test.shape[1]
 
-        term_obj.case_activations = term_obj.activations_test[case_idces_test, :]
-        term_obj.ctrl_activations = term_obj.activations_test[~control_idces_test, :]
+        if case_idces_test.dtype == np.dtype('bool'):
+            term_obj.case_activations = term_obj.activations_test[case_idces_test, :]
+            term_obj.ctrl_activations = term_obj.activations_test[~control_idces_test, :]
+        else:
+            term_obj.case_activations = term_obj.activations_test
+            term_obj.ctrl_activations = term_obj.activations_test
 
         term_obj.case_means = np.mean(term_obj.case_activations, axis=0)
         term_obj.ctrl_means = np.mean(term_obj.ctrl_activations, axis=0)
