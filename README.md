@@ -3,7 +3,7 @@
 [![Documentation][badge-docs]][link-docs]
 [![PyPI][pypi-badge]][pypi-link]
 
-# NetworkVI: Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration and Mechanistic Discovery
+# NetworkVI: Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration and Discovery
 
 ## Getting started
 

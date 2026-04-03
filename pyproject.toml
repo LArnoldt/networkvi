@@ -1,7 +1,7 @@
 [project]
 name = "networkvi"
 version = "0.2.0"
-description = "Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration and Mechanistic Discovery"
+description = "Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration and Discovery"
 readme = "README.md"
 requires-python = ">=3.9,<3.14"
 license = "BSD-3-CLAUSE"
