@@ -15,6 +15,7 @@ import torch
 import torch.nn as nn
 from anndata import AnnData
 from scipy.sparse import csr_matrix, vstack
+from scipy.stats import norm
 from torch.distributions import Normal
 import pickle
 from collections import defaultdict
@@ -665,16 +666,14 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
                         }
 
             if save_results:
-                ci_tag  = "_with_ci" if calculate_ci else ""
                 fname = (
-                    f"{labels_column}{comparison_str}{control_str}"
+                    f"{labels_column}{comparison_str}"
                     f"_res_unp_act_mask_{restrict_unpaired_activations_mask}"
                     f"_flip_{restrict_unpaired_activations_mask_flip}"
                     f"{restrict_by_column_key_values_str}"
                     f"{'_go_terms' if calc_go_terms else ''}"
                     f"_perturbation_{peturbation_gene_stable_id}"
-                    f"_{spikein_tag}"
-                    f"_evaluated_graph_csv{ci_tag}.pkl"
+                    f"_evaluated_graph_csv.pkl"
                 )
                 with open(os.path.join(results_dir, fname), "wb") as f:
                     pickle.dump(peturbation_graph_csv_result_agg[peturbation_gene_stable_id], f)
@@ -727,7 +726,7 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
 
         Returns
         -------
-        Gene and GO importances for expression and accessibility
+        Gene and GO importances for each modality.
         """
 
         self._check_adata_modality_weights(adata)
@@ -1099,9 +1098,9 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
         scdl = self._make_data_loader(adata=adata, indices=indices, batch_size=batch_size)
         labels = labels[indices]
 
-        modalities_names = ["expression", "accessibility", "protein", "genotype"]
+        modalities_names = ["expression", "accessibility", "protein"]
         modalities_encoders = [self.module.z_encoder_expression, self.module.z_encoder_accessibility,
-                               self.module.z_encoder_protein, self.module.z_encoder_genotype]
+                               self.module.z_encoder_protein]
 
         if restrict_modalities is not False:
             if type(restrict_modalities) == str:
@@ -1137,18 +1136,11 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
                 x_chr = torch.zeros(x.shape[0], 1, device=x.device, requires_grad=False)
             else:
                 x_chr = x[:, self.module.n_input_genes: (self.module.n_input_genes + self.module.n_input_regions)]
-            if self.module.n_input_snps == 0:
-                x_geno = torch.zeros(x.shape[0], 1, device=x.device, requires_grad=False)
-            else:
-                x_geno = x[:, (self.module.n_input_genes + self.module.n_input_regions): (
-                        self.n_input_genes + self.n_input_regions + self.n_input_snps)]
 
             if z_encoder_name == "expression":
                 mask = x_rna.sum(dim=1) > 0
             elif z_encoder_name == "accessibility":
                 mask = x_chr.sum(dim=1) > 0
-            elif z_encoder_name == "genotype":
-                mask = torch.zeros(x_geno.shape[0], dtype=torch.bool)
             elif z_encoder_name == "protein":
                 mask = y.sum(dim=1) > 0
 
@@ -1297,7 +1289,7 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
                 with open(os.path.join(results_dir, f'{covariate_attention_registry_statistic_name}_with_ci.pkl'), 'wb') as f:
                     pickle.dump(covariate_attention_registry_statistic, f)
 
-        return covariate_attention_registry_mean, covariate_attention_registry_group_mean, covariate_attention_registry_ci, covariate_attention_registry_group_ci
+        return covariate_attention_registry_mean, covariate_attention_registry_group_mean, covariate_attention_registry_ci, covariate_attention_registry_group_ci, covariate_attention_registry_mean_phenotypes, covariate_attention_registry_group_mean_phenotypes, covariate_attention_registry_ci_phenotypes, covariate_attention_registry_group_ci_phenotypes
 
     @torch.inference_mode()
     def get_library_size_factors(

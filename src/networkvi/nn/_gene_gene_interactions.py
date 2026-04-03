@@ -8,7 +8,7 @@ class LinearPPI(nn.Module):
     def __init__(
         self,
         geneobj,
-        ppi_file: str,
+        interaction_file: str,
         threshold: int = 899,
         score: str = "combined_score",
         activation_function: Optional[Callable] = lambda x: x,
@@ -24,7 +24,7 @@ class LinearPPI(nn.Module):
         -----------
         geneobj:
             A geneobj annoated with 'layersize' and 'block_index' for all gene entries.
-        ppi_file: str
+        interaction_file: str
             Path to a prepared space-separated .csv file of the PPIs containing at least three columns:
 
             <gene1> | <gene2> | <score>
@@ -56,7 +56,7 @@ class LinearPPI(nn.Module):
             self.blocks.append(gene["layersize"])
         self.input_dim = sum(self.blocks)
 
-        ppi_df = pd.read_csv(ppi_file)
+        ppi_df = pd.read_csv(interaction_file)
         # Keep only interactions scoring above threshold
         ppi_df = ppi_df[ppi_df[self.ppi_score] >= threshold]
         cols_without_prot = [*(set(ppi_df.columns) - {"protein1", "protein2"})]
