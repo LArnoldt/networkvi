@@ -8,6 +8,14 @@ NetworkVI will support researchers in interpreting cellular disease mechanisms, 
 
 Check out the :doc:`api`, :doc:`tutorials`, and :doc:`resources` section for further information.
 
+Reliability guidance for interpretability outputs
+-------------------------------------------------
+
+Before drawing biological conclusions from GO importance, TAD importance, or covariate attention scores, consult the :doc:`interpretability_guidance` page. It provides a near-formal decision framework covering when results are reliable, known failure modes, sensitivity to annotation incompleteness, and a quick-reference checklist.
+
+Citation
+--------
+
 If you use NetworkVI, please consider citing:
 
 Arnoldt, L., Upmeier zu Belzen, J., Herrmann, L., Nguyen, K., Theis, F.J., Wild, B. , Eils, R., "Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration and Mechanistic Discovery", bioRxiv, June 2025.
@@ -30,6 +38,7 @@ Contents
 
    api
    tutorials
+   interpretability_guidance
    resources
    changelog
    references
