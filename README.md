@@ -2,6 +2,7 @@
 [![black](https://img.shields.io/badge/Code%20Style-Black-black.svg?labelColor=gray)](https://black.readthedocs.io/en/stable/)
 [![Documentation][badge-docs]][link-docs]
 [![PyPI][pypi-badge]][pypi-link]
+[![DOI](https://zenodo.org/badge/992124546.svg)](https://doi.org/10.5281/zenodo.21227860)
 
 # NetworkVI: Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration and Discovery
 
