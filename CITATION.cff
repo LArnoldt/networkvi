@@ -1,0 +1,64 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite both the software itself and the accompanying paper below."
+title: "NetworkVI: Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration and Discovery"
+type: software
+repository-code: "https://github.com/LArnoldt/networkvi"
+license: BSD-3-Clause
+version: 0.2.0
+date-released: "2026-07-06"
+authors:
+  - family-names: Arnoldt
+    given-names: Lucas
+    orcid: "https://orcid.org/0000-0001-6218-7729"
+    affiliation: "Center for Digital Health, Berlin Institute of Health at Charité – Universitätsmedizin Berlin, Germany"
+  - family-names: "Upmeier zu Belzen"
+    given-names: Julius
+    orcid: "https://orcid.org/0000-0002-0966-4458"
+    affiliation: "Center for Digital Health, Berlin Institute of Health at Charité – Universitätsmedizin Berlin, Germany"
+  - family-names: Herrmann
+    given-names: Luis
+    affiliation: "Center for Digital Health, Berlin Institute of Health at Charité – Universitätsmedizin Berlin, Germany"
+  - family-names: Nguyen
+    given-names: Khue
+    affiliation: "Center for Digital Health, Berlin Institute of Health at Charité – Universitätsmedizin Berlin, Germany"
+  - family-names: Ishaque
+    given-names: Naveed
+    orcid: "https://orcid.org/0000-0002-8426-901X"
+    affiliation: "Center for Digital Health, Berlin Institute of Health at Charité – Universitätsmedizin Berlin, Germany"
+  - family-names: Theis
+    given-names: Fabian
+    orcid: "https://orcid.org/0000-0002-2419-1943"
+    affiliation: "Institute of Computational Biology, Helmholtz Center Munich, Germany"
+  - family-names: Wild
+    given-names: Benjamin
+    orcid: "https://orcid.org/0000-0002-7492-8448"
+    affiliation: "Center for Digital Health, Berlin Institute of Health at Charité – Universitätsmedizin Berlin, Germany"
+  - family-names: Eils
+    given-names: Roland
+    orcid: "https://orcid.org/0000-0002-0034-4036"
+    affiliation: "Center for Digital Health, Berlin Institute of Health at Charité – Universitätsmedizin Berlin, Germany"
+preferred-citation:
+  type: article
+  title: "Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration and Mechanistic Discovery"
+  doi: "10.1101/2025.06.10.657924"
+  year: 2025
+  authors:
+    - family-names: Arnoldt
+      given-names: Lucas
+      orcid: "https://orcid.org/0000-0001-6218-7729"
+    - family-names: "Upmeier zu Belzen"
+      given-names: Julius
+      orcid: "https://orcid.org/0000-0002-0966-4458"
+    - family-names: Herrmann
+      given-names: Luis
+    - family-names: Nguyen
+      given-names: Khue
+    - family-names: Theis
+      given-names: Fabian
+      orcid: "https://orcid.org/0000-0002-2419-1943"
+    - family-names: Wild
+      given-names: Benjamin
+      orcid: "https://orcid.org/0000-0002-7492-8448"
+    - family-names: Eils
+      given-names: Roland
+      orcid: "https://orcid.org/0000-0002-0034-4036"
