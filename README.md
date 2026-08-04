@@ -87,11 +87,13 @@ Please find the [release notes](http://networkvi.readthedocs.io/en/latest/change
 
 ## Contact
 
-If you found a bug, please use the [issue tracker](https://github.com/LArnoldt/networkvi/issues). If you use `NetworkVI` in your research, please consider citing the [preprint](https://www.biorxiv.org/content/10.1101/2025.06.10.657924v1):
+If you found a bug, please use the [issue tracker](https://github.com/LArnoldt/networkvi/issues). If you use `NetworkVI` in your research, please consider citing the [preprint](https://www.biorxiv.org/content/10.1101/2025.06.10.657924v2):
 
 ```
 Arnoldt, L., Upmeier zu Belzen, J., Herrmann, L., Nguyen, K., Theis, F.J., Wild, B. , Eils, R., "Biologically Guided Variational Inference for Interpretable Multimodal Single-Cell Integration and Mechanistic Discovery", bioRxiv, June 2025.
 ```
+
+If you are interested in genetic risk modeling with a similar architecture, check out our `OGM` [repository](https://github.com/juzb/ogm) and [preprint](https://www.medrxiv.org/content/10.64898/2026.07.28.26359187v2).
 
 ## Reproducibility
 
@@ -101,6 +103,3 @@ Code and notebooks to reproduce the results and figues from the paper are availa
 [link-docs]: https://networkvi.readthedocs.io/en/latest/
 [pypi-badge]: https://img.shields.io/pypi/v/networkvi.svg
 [pypi-link]: https://pypi.org/project/networkvi
-
-
-
