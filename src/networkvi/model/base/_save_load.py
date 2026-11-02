@@ -68,7 +68,7 @@ def _load_saved_files(
     model_path = os.path.join(dir_path, model_file_name)
     try:
         _download(backup_url, dir_path, model_file_name)
-        model = torch.load(model_path, map_location=map_location)
+        model = torch.load(model_path, map_location=map_location, weights_only=False)
     except FileNotFoundError as exc:
         raise ValueError(
             f"Failed to load model file at {model_path}. "

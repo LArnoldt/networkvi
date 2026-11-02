@@ -124,10 +124,8 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
         * ``'standard'`` - Standard Gene Layer
         * ``'interaction'`` - Interaction Gene Layer
     gene_layer_interaction_source
-        Gene layer interaction source. One of the following
-        * ``'pp'`` - Protein-Protein
-        * ``'tf'`` - Transcription Factor
-        * ``'tad'`` - Topologically Associated Domains
+        Path to the CSV file of gene-gene interactions of the interaction gene layer
+        (genes in the same topologically associating domain).
     gene_interaction_layer_nlayers
         Number of layers of gene interaction layer.
     standard_gene_size
@@ -240,8 +238,8 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
         protein_gene_layer_type: Literal["none", "standard", "interaction"] = "interaction",
         gene_layer_interaction_source: Optional[str] = None,
         gene_interaction_layer_nlayers: Optional[int] = 1,
-        standard_gene_size: int = 4,
-        standard_go_size: int = 6,
+        standard_gene_size: int = 5,
+        standard_go_size: int = 2,
         obo_file: Optional[str] = None,
         map_ensembl_go: Optional[Union[list, np.ndarray]] = None,
         filter_namespace: bool = True,
@@ -540,12 +538,51 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
         calculate_perturbations_modality: CalculatePerturbationsModality = ["protein"],
         calculate_all_modality: bool = False,
         keep_activations: bool = False,
+        perturbation_mode: Literal["zero", "spikein"] = "zero",
+        spikein_gene_stable_id: str | None = None,
+        spikein_strength: float = 5.0,
+        spikein_cells: str | list | np.ndarray | None = None,
+        spikein_cells_column: str | None = None,
+        spikein_value_mode: Literal["multiplier"] | tuple[Literal["sampling", "mean"], str] = "multiplier",
+        spikein_reference_column: str | None = None,
+        calculate_ci: bool = True,
     ) -> dict[str, dict[str, dict[str, np.ndarray]]]:
 
         self._check_adata_modality_weights(adata)
         adata = self._validate_anndata(adata)
 
+        if perturbation_mode == "spikein":
+            assert spikein_gene_stable_id is not None, \
+                "spikein_gene_stable_id must be provided when perturbation_mode='spikein'."
+
         peturbation_graph_csv_result_agg = {}
+
+        if perturbation_mode == "spikein":
+            n_cells = adata.n_obs
+            if spikein_cells is None:
+                spikein_cell_mask = np.ones(n_cells, dtype=bool)
+                spikein_cells_str = "all"
+            elif isinstance(spikein_cells, np.ndarray) and spikein_cells.dtype == bool:
+                assert len(spikein_cells) == n_cells
+                spikein_cell_mask = spikein_cells
+                spikein_cells_str = "mask"
+            elif isinstance(spikein_cells, np.ndarray) and np.issubdtype(spikein_cells.dtype, np.integer):
+                spikein_cell_mask = np.zeros(n_cells, dtype=bool)
+                spikein_cell_mask[spikein_cells] = True
+                spikein_cells_str = "idx"
+            else:
+                assert spikein_cells_column is not None, \
+                    "spikein_cells_column must be provided when spikein_cells is a label value."
+                if isinstance(spikein_cells, str):
+                    spikein_cells = [spikein_cells]
+                spikein_cell_mask = adata.obs[spikein_cells_column].isin(spikein_cells).values
+                spikein_cells_str = "_".join(str(s) for s in spikein_cells)
+
+            spikein_tag = f"spikein_{spikein_gene_stable_id}_{spikein_strength}_mult_{spikein_cells_str}"
+        else:
+            spikein_cell_mask = None
+            spikein_tag = "zero"
+
 
         ###
 
@@ -578,8 +615,120 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
 
         ###
 
+        if perturbation_mode == "spikein":
+            adata_spiked = adata.copy()
+
+            def apply_spikein(
+                orig,
+                source_matrix,
+                gene_indices,
+            ):
+
+                if spikein_value_mode == "multiplier":
+                    cell_mask_2d = spikein_cell_mask[:, None]
+                    return np.where(
+                        cell_mask_2d,
+                        orig * spikein_strength,
+                        orig
+                    )
+
+                if not isinstance(spikein_value_mode, tuple):
+                    raise ValueError(
+                        "spikein_value_mode must be "
+                        "'multiplier', "
+                        "('sampling', label), "
+                        "or ('mean', label)."
+                    )
+
+                mode, reference_label = spikein_value_mode
+
+                if spikein_reference_column is None:
+                    raise ValueError(
+                        "spikein_reference_column must be provided "
+                        "for sampling/mean modes."
+                    )
+
+                reference_mask = (
+                    adata.obs[spikein_reference_column]
+                    == reference_label
+                ).values
+
+                if reference_mask.sum() == 0:
+                    raise ValueError(
+                        f"No reference cells found for "
+                        f"{reference_label}"
+                    )
+
+                ref_values = np.asarray(
+                    source_matrix[reference_mask][:, gene_indices].todense()
+                    if hasattr(source_matrix, "todense")
+                    else source_matrix[reference_mask][:, gene_indices]
+                )
+                result = orig.copy()
+
+                if mode == "sampling":
+                    sampled_idx = np.random.choice(
+                        ref_values.shape[0],
+                        size=spikein_cell_mask.sum(),
+                        replace=True
+                    )
+                    sampled_values = ref_values[sampled_idx]
+                    result[spikein_cell_mask] = sampled_values
+                elif mode == "mean":
+                    mean_values = ref_values.mean(
+                        axis=0,
+                        keepdims=True
+                    )
+                    result[spikein_cell_mask] = np.repeat(
+                        mean_values,
+                        spikein_cell_mask.sum(),
+                        axis=0
+                    )
+                else:
+                    raise ValueError(
+                        f"Unknown spikein mode: {mode}"
+                    )
+                return result
+
+            for modality in np.unique(adata.var[modality_key]):
+                si_indices = np.where(
+                    (adata.var[gene_stable_id_key] == spikein_gene_stable_id)
+                    & (adata.var[modality_key] == modality)
+                )[0]
+                if len(si_indices) > 0:
+                    orig = np.asarray(
+                        adata_spiked.X[:, si_indices].todense()
+                        if hasattr(adata_spiked.X, "todense")
+                        else adata_spiked.X[:, si_indices]
+                    )
+                    adata_spiked.X[:, si_indices] = apply_spikein(
+                        orig=orig,
+                        source_matrix=adata.X,
+                        gene_indices=si_indices,
+                    )
+            if "protein_expression" in adata_spiked.obsm.keys():
+                si_prot_indices = np.where(
+                    adata_spiked.uns["protein_expression"]["var"]["gene_stable_id"]
+                    == spikein_gene_stable_id
+                )[0]
+                if len(si_prot_indices) > 0:
+                    orig_p = adata_spiked.obsm["protein_expression"][:, si_prot_indices]
+
+                    adata_spiked.obsm[
+                        "protein_expression"
+                    ][:, si_prot_indices] = apply_spikein(
+                        orig=orig_p,
+                        source_matrix=adata.obsm["protein_expression"],
+                        gene_indices=si_prot_indices,
+                    )
+        else:
+            adata_spiked = None
+
         for peturbation_gene_stable_id in perturbation_gene_stable_ids:
-            adata_perturbation = adata.copy()
+            if perturbation_mode == "spikein":
+                adata_perturbation = adata_spiked
+            else:
+                adata_perturbation = adata.copy()
 
             peturbation_graph_csv_result_agg[peturbation_gene_stable_id] = {}
 
@@ -611,13 +760,14 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
 
                 peturbation_graph_csv_result_agg[peturbation_gene_stable_id][perturbation_des] = {}
 
-                if perturbation_des == "protein":
-                    adata_perturbation.obsm["protein_expression"][:, perturbation_indices_prot] = np.zeros(shape=(adata_perturbation.obsm["protein_expression"].shape[0], len(perturbation_indices)))
-                else:
-                    if len(perturbation_indices) > 0:
-                        adata_perturbation.X[:, perturbation_indices] = np.zeros(shape=(adata_perturbation.shape[0], len(perturbation_indices)))
-                    if perturbation_des == "all_modality" and "protein_expression" in adata_perturbation.obsm.keys() and len(perturbation_indices_prot) > 0:
-                        adata_perturbation.obsm["protein_expression"][:, perturbation_indices_prot] = np.zeros(shape=(adata_perturbation.obsm["protein_expression"].shape[0], len(perturbation_indices_prot)))
+                if perturbation_mode == "zero":
+                    if perturbation_des == "protein":
+                        adata_perturbation.obsm["protein_expression"][:, perturbation_indices_prot] = np.zeros(shape=(adata_perturbation.obsm["protein_expression"].shape[0], len(perturbation_indices)))
+                    else:
+                        if len(perturbation_indices) > 0:
+                            adata_perturbation.X[:, perturbation_indices] = np.zeros(shape=(adata_perturbation.shape[0], len(perturbation_indices)))
+                        if perturbation_des == "all_modality" and "protein_expression" in adata_perturbation.obsm.keys() and len(perturbation_indices_prot) > 0:
+                            adata_perturbation.obsm["protein_expression"][:, perturbation_indices_prot] = np.zeros(shape=(adata_perturbation.obsm["protein_expression"].shape[0], len(perturbation_indices_prot)))
 
                 if restrict_modalities is False or perturbation_des == "all_modality":
                     restrict_modalities_val = restrict_modalities
@@ -653,6 +803,7 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
                     save_results=False,
                     results_dir=results_dir,
                     keep_activations=keep_activations,
+                    calculate_ci=calculate_ci,
                 )
 
                 for modality in peturbation_graph_csv_result.keys():
@@ -673,7 +824,8 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
                     f"{restrict_by_column_key_values_str}"
                     f"{'_go_terms' if calc_go_terms else ''}"
                     f"_perturbation_{peturbation_gene_stable_id}"
-                    f"_evaluated_graph_csv.pkl"
+                    f"_{spikein_tag}"
+                    f"_evaluated_graph_csv{'_with_ci' if calculate_ci else ''}.pkl"
                 )
                 with open(os.path.join(results_dir, fname), "wb") as f:
                     pickle.dump(peturbation_graph_csv_result_agg[peturbation_gene_stable_id], f)
@@ -711,6 +863,7 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
         save_results: bool = True,
         results_dir: str = "",
         keep_activations: bool = False,
+        calculate_ci: bool = True,
     ) -> dict[str, dict[str, pd.DataFrame]]:
         """Return gene and GO importances.
 
@@ -758,7 +911,7 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
         else:
             indices = np.setdiff1d(indices, self.train_idx)
             if self.val_idx is None:
-                self.val_idx = indices[:n_val]
+                self.val_idx = indices[:self.n_val]
             #if not self.test_idx:
             #    self.test_idx = indices[len(self.val_idx) + len(self.train_idx):]
 
@@ -978,7 +1131,8 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
                         load_save_fit=load_save_fit,
                         save_fit=save_fit,
                         overwrite_save_fit=overwrite_save_fit,
-                        path_save_fit=os.path.join(f"{results_dir}", f"{z_encoder_name}_{phenotype_str}_save_fit")
+                        path_save_fit=os.path.join(f"{results_dir}", f"{z_encoder_name}_{phenotype_str}_save_fit"),
+                        calculate_ci=calculate_ci
                     )
 
                     graph_csv_phenotype = goobj_to_csv(
@@ -1092,7 +1246,7 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
         else:
             indices = np.setdiff1d(indices, self.train_idx)
             if self.val_idx is None:
-                self.val_idx = indices[:n_val]
+                self.val_idx = indices[:self.n_val]
             indices = np.concatenate([self.train_idx, self.val_idx])
 
         scdl = self._make_data_loader(adata=adata, indices=indices, batch_size=batch_size)
@@ -1401,7 +1555,7 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
             if give_mean:
                 # does each model need to have this latent distribution param?
                 if self.module.latent_distribution == "ln":
-                    samples = Normal(qz_m, qz_v.sqrt()).sample([1])
+                    samples = Normal(qz_m, qz_v.clamp(min=1e-8).sqrt()).sample([1])
                     z = torch.nn.functional.softmax(samples, dim=-1)
                     z = z.mean(dim=0)
                 else:

@@ -285,7 +285,7 @@ class VAEMixin:
             else:
                 qzm: Tensor = outputs.get(MODULE_KEYS.QZM_KEY)
                 qzv: Tensor = outputs.get(MODULE_KEYS.QZV_KEY)
-                qz: Distribution = Normal(qzm, qzv.sqrt())
+                qz: Distribution = Normal(qzm, qzv.clamp(min=1e-8).sqrt())
 
             if return_dist:
                 qz_means.append(qzm.cpu())

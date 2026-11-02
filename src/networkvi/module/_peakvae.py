@@ -45,10 +45,8 @@ class Decoder(nn.Module):
         * ``'standard'`` - Standard Gene Layer
         * ``'interaction'`` - Interaction Gene Layer
     gene_layer_interaction_source
-        Gene layer interaction source. One of the following
-        * ``'pp'`` - Protein-Protein
-        * ``'tf'`` - Transcription Factor
-        * ``'tad'`` - Topologically Associated Domains
+        Path to the CSV file of gene-gene interactions of the interaction gene layer
+        (genes in the same topologically associating domain).
     layers_type
         Type of layer. One of the following
         * ``'linear'`` - Linear Layers
@@ -67,7 +65,7 @@ class Decoder(nn.Module):
         use_layer_norm: bool = True,
         deep_inject_covariates: bool = False,
         gene_layer_type: Literal["none", "standard", "interaction"] = "interaction",
-        gene_layer_interaction_source: Literal["pp", "tf", "tad"] = "tad",
+        gene_layer_interaction_source: Optional[str] = None,
         layers_type: Literal["linear"] = "linear",
         activation_fn: nn.Module = nn.LeakyReLU,
         **kwargs,

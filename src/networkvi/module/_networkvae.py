@@ -136,7 +136,7 @@ class LibrarySizeEncoder(torch.nn.Module):
         use_layer_norm: bool = True,
         deep_inject_covariates: bool = False,
         gene_layer_type: Literal["none", "standard", "interaction"] = "interaction",
-        gene_layer_interaction_source: Literal["pp", "tf", "tad"] = "tad",
+        gene_layer_interaction_source: Optional[str] = None,
         layers_type: Literal["linear", "go"] = "go",
         **kwargs,
     ):
@@ -367,10 +367,8 @@ class NETWORKVAE(BaseModuleClass):
         * ``'standard'`` - Standard Gene Layer
         * ``'interaction'`` - Interaction Gene Layer
     gene_layer_interaction_source
-        Gene layer interaction source. One of the following
-        * ``'pp'`` - Protein-Protein
-        * ``'tf'`` - Transcription Factor
-        * ``'tad'`` - Topologically Associated Domains
+        Path to the CSV file of gene-gene interactions of the interaction gene layer
+        (genes in the same topologically associating domain).
     gene_interaction_layer_nlayers
         Number of layers of gene interaction layer.
     standard_gene_size
@@ -462,8 +460,8 @@ class NETWORKVAE(BaseModuleClass):
         library_size_layers_type: Literal["linear", "go"] = "go",
         gene_layer_interaction_source: Optional[str] = None,
         gene_interaction_layer_nlayers: Optional[int] = 1,
-        standard_gene_size: int = 4,
-        standard_go_size: int = 6,
+        standard_gene_size: int = 5,
+        standard_go_size: int = 2,
         obo_file: Optional[str] = None,
         map_ensembl_go: Optional[Union[list, np.ndarray]] = None,
         filter_namespace: bool = True,
@@ -1082,12 +1080,12 @@ class NETWORKVAE(BaseModuleClass):
         if self.use_product_of_experts:
             qz_m, qz_v = self.mix_modalities_poe((qzm_expr, qzm_acc, qzm_pro), (qzv_expr, qzv_acc, qzv_pro),  (mask_expr, mask_acc, mask_pro))
 
-            untran_z = Normal(qz_m, qz_v.sqrt()).rsample()
+            untran_z = Normal(qz_m, qz_v.clamp(min=1e-8).sqrt()).rsample()
 
         elif self.use_mixture_of_experts:
             qz_m, qz_v = self.mix_modalities_moe((qzm_expr, qzm_acc, qzm_pro), (qzv_expr, qzv_acc, qzv_pro),  (mask_expr, mask_acc, mask_pro), weights)
 
-            untran_z = Normal(qz_m, qz_v.sqrt()).rsample()
+            untran_z = Normal(qz_m, qz_v.clamp(min=1e-8).sqrt()).rsample()
         elif self.use_mean_mixing:
 
             qz_m = self.mix_modalities(
@@ -1107,18 +1105,18 @@ class NETWORKVAE(BaseModuleClass):
                 def unsqz(zt, n_s):
                     return zt.unsqueeze(0).expand((n_s, zt.size(0), zt.size(1)))
 
-                untran_za = Normal(qzm_acc, qzv_acc.sqrt()).sample((n_samples,))
+                untran_za = Normal(qzm_acc, qzv_acc.clamp(min=1e-8).sqrt()).sample((n_samples,))
                 z_acc = self.z_encoder_accessibility.z_transformation(untran_za)
-                untran_ze = Normal(qzm_expr, qzv_expr.sqrt()).sample((n_samples,))
+                untran_ze = Normal(qzm_expr, qzv_expr.clamp(min=1e-8).sqrt()).sample((n_samples,))
                 z_expr = self.z_encoder_expression.z_transformation(untran_ze)
-                untran_zp = Normal(qzm_pro, qzv_pro.sqrt()).sample((n_samples,))
+                untran_zp = Normal(qzm_pro, qzv_pro.clamp(min=1e-8).sqrt()).sample((n_samples,))
                 z_pro = self.z_encoder_protein.z_transformation(untran_zp)
 
                 libsize_expr = unsqz(libsize_expr, n_samples)
                 libsize_acc = unsqz(libsize_acc, n_samples)
 
             # sample from the mixed representation
-            untran_z = Normal(qz_m, qz_v.sqrt()).rsample()
+            untran_z = Normal(qz_m, qz_v.clamp(min=1e-8).sqrt()).rsample()
         else:
             raise ValueError("")
 
@@ -1323,7 +1321,7 @@ class NETWORKVAE(BaseModuleClass):
             qz_m = inference_outputs["qz_m"]
             qz_v = inference_outputs["qz_v"]
             kl_div_z = kld(
-                Normal(qz_m, torch.sqrt(qz_v)),
+                Normal(qz_m, torch.sqrt(qz_v.clamp(min=1e-8))),
                 Normal(0, 1),
             ).sum(dim=1)
 
@@ -1397,9 +1395,9 @@ class NETWORKVAE(BaseModuleClass):
             if mask12.sum().gt(0):
                 penalty12 = sym_kld(
                     mod_params1[0],
-                    mod_params1[1].sqrt(),
+                    mod_params1[1].clamp(min=1e-8).sqrt(),
                     mod_params2[0],
-                    mod_params2[1].sqrt(),
+                    mod_params2[1].clamp(min=1e-8).sqrt(),
                 )
                 penalty12 = torch.where(mask12, penalty12.T, torch.zeros_like(penalty12).T).sum(
                     dim=0
@@ -1408,9 +1406,9 @@ class NETWORKVAE(BaseModuleClass):
             if mask13.sum().gt(0):
                 penalty13 = sym_kld(
                     mod_params1[0],
-                    mod_params1[1].sqrt(),
+                    mod_params1[1].clamp(min=1e-8).sqrt(),
                     mod_params3[0],
-                    mod_params3[1].sqrt(),
+                    mod_params3[1].clamp(min=1e-8).sqrt(),
                 )
                 penalty13 = torch.where(mask13, penalty13.T, torch.zeros_like(penalty13).T).sum(
                     dim=0
@@ -1419,9 +1417,9 @@ class NETWORKVAE(BaseModuleClass):
             if mask23.sum().gt(0):
                 penalty23 = sym_kld(
                     mod_params2[0],
-                    mod_params2[1].sqrt(),
+                    mod_params2[1].clamp(min=1e-8).sqrt(),
                     mod_params3[0],
-                    mod_params3[1].sqrt(),
+                    mod_params3[1].clamp(min=1e-8).sqrt(),
                 )
                 penalty23 = torch.where(mask23, penalty23.T, torch.zeros_like(penalty23).T).sum(
                     dim=0
@@ -1490,8 +1488,8 @@ class NETWORKVAE(BaseModuleClass):
 @auto_move_data
 def sym_kld(qzm1, qzv1, qzm2, qzv2):
     """Symmetric KL divergence between two Gaussians."""
-    rv1 = Normal(qzm1, qzv1.sqrt())
-    rv2 = Normal(qzm2, qzv2.sqrt())
+    rv1 = Normal(qzm1, qzv1.clamp(min=1e-8).sqrt())
+    rv2 = Normal(qzm2, qzv2.clamp(min=1e-8).sqrt())
 
     return kld(rv1, rv2) + kld(rv2, rv1)
 

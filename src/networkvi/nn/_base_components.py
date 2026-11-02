@@ -56,10 +56,8 @@ class GeneLayers(nn.Module):
     input_dropout
         Dropout rate to apply to each of the hidden layers
     gene_layer_interaction_source
-        Gene layer interaction source. One of the following
-        * ``'pp'`` - Protein-Protein
-        * ``'tf'`` - Transcription Factor
-        * ``'tad'`` - Topologically Associated Domains
+        Path to the CSV file of gene-gene interactions of the interaction gene layer
+        (genes in the same topologically associating domain).
     n_hidden
         The number of nodes per hidden layer
     activation_fn
@@ -73,7 +71,7 @@ class GeneLayers(nn.Module):
     def __init__(
         self,
         ensembl_ids,
-        standard_gene_size: int = 4,
+        standard_gene_size: int = 5,
         input_dropout: float = 0.1,
         gene_layer_interaction_source: Optional[str] = None,
         n_hidden: int = 128,
@@ -267,7 +265,7 @@ class GOLayers(nn.Module):
         ensembl_ids,
         obo_file: str,
         map_ensembl_go: list | np.ndarray,
-        standard_go_size: int = 6,
+        standard_go_size: int = 2,
         filter_namespace: bool = True,
         input_dropout: float = 0.1,
         n_layers: int = 5,
@@ -405,6 +403,7 @@ class GOLayers(nn.Module):
             go_unknown_hierarchy_depth=gomodel["go_unknown_hierarchy_depth"],
             go_unknown_go_size=gomodel["go_unknown_go_size"],
             standard_go_size=gomodel["standard_go_size"],
+            standard_gene_size=max(genemodel_out_blocks) if len(genemodel_out_blocks) else 1,
             dynamic_go_cfg=self.hierarchy["dynamic_go"],
             **hierarchy,
         )
@@ -928,6 +927,7 @@ class GOLayers(nn.Module):
         go_unknown_go_size,
         go_unknown_hierarchy_depth,
         standard_go_size,
+        standard_gene_size,
         min_genes_disrupted,
         n_latent,
         # regulates_init,
@@ -1044,7 +1044,6 @@ class GOLayers(nn.Module):
             )
             self.get_overflow_info(dynamic_go_cfg, standard_go_size, n_latent)
         else:
-            standard_gene_size = 6
             self.set_layersize(
                 self.goobj,
                 relations,
@@ -1338,7 +1337,8 @@ class Encoder(nn.Module):
         * ``'standard'`` - Standard Gene Layer
         * ``'interaction'`` - Interaction Gene Layer
     gene_layer_interaction_source
-        Gene layer interaction source. One of the following
+        Path to the CSV file of gene-gene interactions of the interaction gene layer
+        (genes in the same topologically associating domain).
     layers_type
         Type of layer. One of the following
         * ``'linear'`` - Linear Layers
@@ -1365,8 +1365,8 @@ class Encoder(nn.Module):
         gene_layer_type: Literal["none", "standard", "interaction"] = "interaction",
         gene_layer_interaction_source: Optional[str] = None,
         layers_type: Literal["linear", "go"] = "go",
-        standard_gene_size: int = 4,
-        standard_go_size: int = 6,
+        standard_gene_size: int = 5,
+        standard_go_size: int = 2,
         obo_file: Optional[str] = None,
         map_ensembl_go: Optional[Union[list, np.ndarray]] = None,
         filter_namespace: bool = True,
@@ -1473,7 +1473,7 @@ class Encoder(nn.Module):
         q = self.encoder(x, *cat_list, cont_input=cont_input)
         q_m = self.mean_encoder(q)
         q_v = self.var_activation(self.var_encoder(q)) + self.var_eps
-        dist = Normal(q_m, q_v.sqrt())
+        dist = Normal(q_m, q_v.clamp(min=1e-8).sqrt())
         latent = self.z_transformation(dist.rsample())
         if self.return_dist:
             return dist, latent
@@ -2002,8 +2002,8 @@ class SparseEncoderTOTALVI(nn.Module):
         gene_layer_type: Literal["none", "standard", "interaction"] = "interaction",
         gene_layer_interaction_source: Optional[str] = None,
         layers_type: Literal["linear", "go"] = "go",
-        standard_gene_size: int = 4,
-        standard_go_size: int = 6,
+        standard_gene_size: int = 5,
+        standard_go_size: int = 2,
         obo_file: Optional[str] = None,
         map_ensembl_go: Optional[Union[list, np.ndarray]] = None,
         activation_fn: nn.Module = nn.ReLU,
@@ -2091,7 +2091,7 @@ class SparseEncoderTOTALVI(nn.Module):
 
     def reparameterize_transformation(self, mu, var):
         """Reparameterization trick to sample from a normal distribution."""
-        untran_z = Normal(mu, var.sqrt()).rsample()
+        untran_z = Normal(mu, var.clamp(min=1e-8).sqrt()).rsample()
         z = self.z_transformation(untran_z)
         return z, untran_z
 
@@ -2128,14 +2128,14 @@ class SparseEncoderTOTALVI(nn.Module):
         q = self.encoder(data, *cat_list)
         qz_m = self.z_mean_encoder(q)
         qz_v = torch.exp(self.z_var_encoder(q)) + 1e-4
-        q_z = Normal(qz_m, qz_v.sqrt())
+        q_z = Normal(qz_m, qz_v.clamp(min=1e-8).sqrt())
         untran_z = q_z.rsample()
         z = self.z_transformation(untran_z)
 
         ql_gene = self.l_gene_encoder(data, *cat_list)
         ql_m = self.l_gene_mean_encoder(ql_gene)
         ql_v = torch.exp(self.l_gene_var_encoder(ql_gene)) + 1e-4
-        q_l = Normal(ql_m, ql_v.sqrt())
+        q_l = Normal(ql_m, ql_v.clamp(min=1e-8).sqrt())
         log_library_gene = q_l.rsample()
         log_library_gene = torch.clamp(log_library_gene, max=15)
         library_gene = self.l_transformation(log_library_gene)
@@ -2233,7 +2233,7 @@ class EncoderTOTALVI(nn.Module):
 
     def reparameterize_transformation(self, mu, var):
         """Reparameterization trick to sample from a normal distribution."""
-        untran_z = Normal(mu, var.sqrt()).rsample()
+        untran_z = Normal(mu, var.clamp(min=1e-8).sqrt()).rsample()
         z = self.z_transformation(untran_z)
         return z, untran_z
 
@@ -2267,14 +2267,14 @@ class EncoderTOTALVI(nn.Module):
         q = self.encoder(data, *cat_list)
         qz_m = self.z_mean_encoder(q)
         qz_v = torch.exp(self.z_var_encoder(q)) + 1e-4
-        q_z = Normal(qz_m, qz_v.sqrt())
+        q_z = Normal(qz_m, qz_v.clamp(min=1e-8).sqrt())
         untran_z = q_z.rsample()
         z = self.z_transformation(untran_z)
 
         ql_gene = self.l_gene_encoder(data, *cat_list)
         ql_m = self.l_gene_mean_encoder(ql_gene)
         ql_v = torch.exp(self.l_gene_var_encoder(ql_gene)) + 1e-4
-        q_l = Normal(ql_m, ql_v.sqrt())
+        q_l = Normal(ql_m, ql_v.clamp(min=1e-8).sqrt())
         log_library_gene = q_l.rsample()
         log_library_gene = torch.clamp(log_library_gene, max=15)
         library_gene = self.l_transformation(log_library_gene)

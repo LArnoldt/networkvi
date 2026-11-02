@@ -261,7 +261,8 @@ def calculate_node(
     load_save_fit=False,
     save_fit=False,
     overwrite_save_fit=False,
-    path_save_fit=None
+    path_save_fit=None,
+    calculate_ci=True
 ):
     term_obj = goobj[go_term]
 
@@ -425,12 +426,15 @@ def calculate_node(
                     roc = roc_auc_score(y_true=y_true, y_score=y_score)
                     setattr(term_obj.predictors[covariate], attr_prefix + "roc", roc)
 
-                    roc_med, roc_lo, roc_hi = bootstrap_auc_ci(
-                        y_true,
-                        y_score,
-                        n_boot=200,
-                        subsample_frac=1.0,
-                    )
+                    if calculate_ci:
+                        roc_med, roc_lo, roc_hi = bootstrap_auc_ci(
+                            y_true,
+                            y_score,
+                            n_boot=200,
+                            subsample_frac=1.0,
+                        )
+                    else:
+                        roc_med = roc_lo = roc_hi = np.nan
                     setattr(term_obj.predictors[covariate], attr_prefix + "roc_ci_median", roc_med)
                     setattr(term_obj.predictors[covariate], attr_prefix + "roc_ci_lower", roc_lo)
                     setattr(term_obj.predictors[covariate], attr_prefix + "roc_ci_upper", roc_hi)
@@ -629,7 +633,8 @@ def compare_acts(
     load_save_fit=False,
     save_fit=False,
     overwrite_save_fit=False,
-    path_save_fit=None
+    path_save_fit=None,
+    calculate_ci=True
 ):
     logger.info("Starting fitting and evaluating GO Terms")
 
@@ -648,7 +653,8 @@ def compare_acts(
             load_save_fit=load_save_fit,
             save_fit=save_fit,
             overwrite_save_fit=overwrite_save_fit,
-            path_save_fit=path_save_fit
+            path_save_fit=path_save_fit,
+            calculate_ci=calculate_ci
         )
         return None
 
@@ -775,7 +781,8 @@ def calculate_interpretations(
     load_save_fit=False,
     save_fit=False,
     overwrite_save_fit=False,
-    path_save_fit=None
+    path_save_fit=None,
+    calculate_ci=True
 ):
     if load_go_terms == False:
         goorder = []
@@ -888,17 +895,20 @@ def calculate_interpretations(
         geneobj_keys = np.array(list(geneobj.keys()))
         geneobj_keys_to_activation = defaultdict(set)
         for index, gene in enumerate(geneobj):
+            block_index = geneobj[gene]["block_index"]
+            block_index = block_index[0] if isinstance(block_index, (list, tuple, np.ndarray)) else block_index
+            gene_columns = range(block_index * geneobj[gene]["layersize"], (block_index + 1) * geneobj[gene]["layersize"])
             if expand_gene_nodes:
                 try:
                     genes_select = ast.literal_eval(gene)
                     for gene_select in genes_select:
                         index_gene = np.where(geneobj_keys == gene_select)[0]
                         if len(index_gene) == 1:
-                            geneobj_keys_to_activation[gene_select].add(index)
+                            geneobj_keys_to_activation[gene_select].update(gene_columns)
                 except:
-                    geneobj_keys_to_activation[gene].add(index)
+                    geneobj_keys_to_activation[gene].update(gene_columns)
             else:
-                geneobj_keys_to_activation[gene].add(index)
+                geneobj_keys_to_activation[gene].update(gene_columns)
         gene_group_names = []
         if type(load_gene_groups) == list:
             gene_groups_selection = load_gene_groups
@@ -921,7 +931,7 @@ def calculate_interpretations(
                 goobj[gene_group_name_str] = GeneTerm(
                     gene_group_name_str,
                     gene_group_name_str,
-                    list(gene_group_indices),
+                    sorted(gene_group_indices),
                     "genes",
                     gene_group_name,
                     gene_group_inputs,
@@ -953,7 +963,8 @@ def calculate_interpretations(
         load_save_fit=load_save_fit,
         save_fit=save_fit,
         overwrite_save_fit=overwrite_save_fit,
-        path_save_fit=path_save_fit
+        path_save_fit=path_save_fit,
+        calculate_ci=calculate_ci
     )
 
     return goobj
