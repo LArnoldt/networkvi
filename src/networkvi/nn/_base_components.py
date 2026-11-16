@@ -1424,6 +1424,12 @@ class Encoder(nn.Module):
             )
 
         else:
+            if layers_type == "go":
+                warnings.warn(
+                    "layers_type='go' was requested but no Ensembl IDs were provided; falling back to a dense FCLayers encoder.",
+                    UserWarning,
+                    stacklevel=2,
+                )
             self.encoder = FCLayers(
                 n_in=n_input,
                 n_out=n_hidden,
@@ -2052,6 +2058,12 @@ class SparseEncoderTOTALVI(nn.Module):
             )
 
         else:
+            if layers_type == "go":
+                warnings.warn(
+                    "layers_type='go' was requested but no Ensembl IDs were provided; falling back to a dense FCLayers encoder.",
+                    UserWarning,
+                    stacklevel=2,
+                )
             self.encoder = FCLayers(
                 n_in=n_input,
                 n_out=n_hidden,

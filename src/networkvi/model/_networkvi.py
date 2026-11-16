@@ -1353,10 +1353,15 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
             covariate_attention_registry_group_ci = defaultdict(dict)
             for z_encoder_name, z_encoder in zip(modalities_names, modalities_encoders):
                 if hasattr(z_encoder.encoder, "gomodel"):
-                    index_gene = 0
+                    gomodel = z_encoder.encoder.gomodel
+                    gene_blocks = [1] * len(gomodel.genemodel_out_blocks) if gomodel.attention["reduce"] else list(gomodel.genemodel_out_blocks)
+                    gene_offsets = np.concatenate([[0], np.cumsum(gene_blocks)])
+                    gene_attention = -1 in covariate_attention_registry_concat[z_encoder_name]
                     for go_term_ensg in list(z_encoder.encoder.goobj.keys()) + list(z_encoder.genemodel.geneobj.keys()):
-                        if go_term_ensg.startswith("ENSG"):
-                            out_slice = slice(0 + 4 * index_gene, 4 + 4 * index_gene)
+                        if go_term_ensg.startswith("ENSG") and gene_attention:
+                            block_index = z_encoder.genemodel.geneobj[go_term_ensg]["block_index"]
+                            block_index = block_index[0] if isinstance(block_index, (list, tuple, np.ndarray)) else block_index
+                            out_slice = slice(gene_offsets[block_index], gene_offsets[block_index + 1])
                             depth = -1
                         elif go_term_ensg.startswith("GO:") and z_encoder.encoder.goobj[go_term_ensg].depth != self.module.n_layers_encoder:
                             out_slice = z_encoder.encoder.goobj[go_term_ensg].out_slice
@@ -1364,7 +1369,6 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
                         else:
                             out_slice = None
                             depth = None
-                            index_gene += 1
 
                         if out_slice is not None:
                             A = covariate_attention_registry_concat[z_encoder_name][depth][mask, out_slice]
