@@ -87,7 +87,7 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
     modality_penalty
         Training Penalty across modalities. One of the following:
         * ``"Jeffreys"``: Jeffreys penalty to align modalities
-        * ``"MMD"``: MMD penalty to align modalities
+        * ``"MMD"``: MMD penalty to align modalities (default)
         * ``"None"``: No penalty
     n_hidden
         Number of nodes per hidden layer. If `None`, defaults to square root
@@ -216,7 +216,7 @@ class NETWORKVI(VAEMixin, UnsupervisedTrainingMixin, BaseModelClass, ArchesMixin
         ensembl_ids_proteins: np.ndarray | None = None,
         n_patient_covariates: int = 0,
         modality_weights: Literal["equal", "cell", "universal", "moe"] = "moe",
-        modality_penalty: Literal["Jeffreys", "MMD", "None"] = "Jeffreys",
+        modality_penalty: Literal["Jeffreys", "MMD", "None"] = "MMD",
         n_hidden: int | None = None,
         n_latent: int | None = None,
         n_layers_encoder: int = 2,

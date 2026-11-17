@@ -330,7 +330,7 @@ class NETWORKVAE(BaseModuleClass):
     modality_penalty
         Training Penalty across modalities. One of the following:
         * ``"Jeffreys"``: Jeffreys penalty to align modalities
-        * ``"MMD"``: MMD penalty to align modalities
+        * ``"MMD"``: MMD penalty to align modalities (default)
         * ``"None"``: No penalty
     n_hidden
         Number of nodes per hidden layer. If `None`, defaults to square root
@@ -432,7 +432,7 @@ class NETWORKVAE(BaseModuleClass):
         ensembl_ids_proteins: np.ndarray | None = None,
         n_patient_covariates: int = 0,
         modality_weights: Literal["equal", "cell", "universal", "moe"] = "equal",
-        modality_penalty: Literal["Jeffreys", "MMD", "None"] = "Jeffreys",
+        modality_penalty: Literal["Jeffreys", "MMD", "None"] = "MMD",
         n_batch: int = 0,
         n_obs: int = 0,
         n_labels: int = 0,
